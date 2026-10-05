@@ -16,6 +16,11 @@ from .services.curiosity_scheduler import (
 )
 from .routers.notifications import router as notifications_router
 
+# Student Progress
+from .routers.student_progress import (
+    student_router as student_progress_router,
+    teacher_router as teacher_progress_router,
+)
 
 
 Base.metadata.create_all(bind=engine)
@@ -26,6 +31,8 @@ app = FastAPI(
     description="Interactive multi-class learning platform",
     version="1.0.0",
 )
+
+
 @app.on_event("startup")
 def start_scheduler():
     start_curiosity_scheduler()
@@ -43,6 +50,11 @@ app.include_router(mock_test_router)
 app.include_router(curiosity_router)
 app.include_router(curiosity_location_router)
 app.include_router(notifications_router)
+
+app.include_router(student_progress_router)
+app.include_router(teacher_progress_router)
+
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -107,7 +119,7 @@ def geonames_country(name: str):
         # Country name দিয়ে GeoNames থেকে country code খুঁজবে
 
         search_response = requests.get(
-           "http://api.geonames.org/searchJSON",
+            "http://api.geonames.org/searchJSON",
             params={
                 "name": name,
                 "featureCode": "PCLI",
@@ -126,15 +138,13 @@ def geonames_country(name: str):
                 "error": "GeoNames country পাওয়া যায়নি"
             }
 
-
         country_code = search_data["geonames"][0]["countryCode"]
-
 
         # Step 2:
         # Country code দিয়ে complete country information আনবে
 
         info_response = requests.get(
-           "http://api.geonames.org/countryInfoJSON",
+            "http://api.geonames.org/countryInfoJSON",
             params={
                 "country": country_code,
                 "username": GEONAMES_USERNAME,
@@ -146,18 +156,15 @@ def geonames_country(name: str):
 
         info_data = info_response.json()
 
-
         if not info_data.get("geonames"):
             return {
                 "error": "Country information পাওয়া যায়নি"
             }
 
-
         # Step 3:
         # Country information frontend-এ পাঠাবে
 
         return info_data["geonames"][0]
-
 
     except requests.RequestException as e:
 

@@ -9,6 +9,11 @@ import {
   Geographies,
   Geography,
 } from "react-simple-maps";
+import ClimateChangeLab from "./components/ClimateChangeLab";
+import WeatherStation from "./components/WeatherStation";
+import DigitalGeographyClassroom from "./components/DigitalGeographyClassroom";
+import LivingGeography from "./components/LivingGeography";
+
 
 const API_URL = "http://127.0.0.1:8000";
 const translations = {
@@ -76,6 +81,9 @@ const translations = {
     yourName: "Your name",
     email: "Email",
     password: "Password",
+    role: "Role",
+    studentRole: "Student",
+    teacherRole: "Teacher",
     login: "Login",
     register: "Register",
     noAccount: "Don't have an account? Register",
@@ -179,6 +187,9 @@ const translations = {
     yourName: "আপনার নাম",
     email: "ইমেইল",
     password: "পাসওয়ার্ড",
+    role: "রোল",
+    studentRole: "স্টুডেন্ট",
+    teacherRole: "টিচার",
     login: "লগইন",
     register: "রেজিস্টার",
     noAccount: "অ্যাকাউন্ট নেই? রেজিস্টার করুন",
@@ -416,6 +427,269 @@ function getIndiaTerrainFill(stateName: string) {
   return "#dceecb"; // soft plains / land
 }
 
+
+// --------------------------------------------------
+// Digital Citizenship Feature
+// --------------------------------------------------
+
+type DigitalCitizenshipTopic = {
+  id: string;
+  icon: string;
+  title: string;
+  titleBn: string;
+  intro: string;
+  introBn: string;
+  points: string[];
+  pointsBn: string[];
+  question: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+};
+
+const DIGITAL_CITIZENSHIP_TOPICS: DigitalCitizenshipTopic[] = [
+  {
+    id: "fake-news",
+    icon: "📰",
+    title: "Fake News",
+    titleBn: "ফেক নিউজ",
+    intro: "Learn how to pause, check and verify information before sharing it.",
+    introBn: "কোনো তথ্য শেয়ার করার আগে কীভাবে থামবেন, যাচাই করবেন এবং সত্যতা দেখবেন তা শিখুন।",
+    points: [
+      "Check the source and date.",
+      "Compare the claim with more than one reliable source.",
+      "Be careful with shocking headlines, edited images and viral posts.",
+    ],
+    pointsBn: [
+      "Source এবং date যাচাই করুন।",
+      "একাধিক নির্ভরযোগ্য source-এর সঙ্গে তথ্য মিলিয়ে দেখুন।",
+      "চমকপ্রদ headline, edited image এবং viral post সম্পর্কে সতর্ক থাকুন।",
+    ],
+    question: "Before sharing a surprising news post, what should you do first?",
+    options: [
+      "Share it quickly",
+      "Check the source and verify the claim",
+      "Trust the comments",
+      "Forward it to friends",
+    ],
+    answer: 1,
+    explanation: "Checking the source and verifying the claim helps you avoid spreading misinformation.",
+  },
+  {
+    id: "reliable-sources",
+    icon: "🔎",
+    title: "Reliable Sources",
+    titleBn: "নির্ভরযোগ্য Source",
+    intro: "Build the habit of checking who created the information, why and where it came from.",
+    introBn: "কে তথ্যটি তৈরি করেছে, কেন করেছে এবং তথ্যটি কোথা থেকে এসেছে—এসব যাচাই করার অভ্যাস গড়ে তুলুন।",
+    points: [
+      "Look for the author or organisation.",
+      "Check evidence, references and publication date.",
+      "Prefer official, educational or well-established sources when possible.",
+    ],
+    pointsBn: [
+      "Author বা organisation-এর নাম দেখুন।",
+      "Evidence, references এবং publication date যাচাই করুন।",
+      "সম্ভব হলে official, educational বা established source ব্যবহার করুন।",
+    ],
+    question: "Which is the strongest sign that an online claim needs more checking?",
+    options: [
+      "It provides evidence and sources",
+      "It names the author",
+      "It makes a strong claim but gives no evidence",
+      "It has a publication date",
+    ],
+    answer: 2,
+    explanation: "A strong claim without evidence or sources deserves extra verification before you trust it.",
+  },
+  {
+    id: "cyber-safety",
+    icon: "🛡️",
+    title: "Cyber Safety",
+    titleBn: "সাইবার সেফটি",
+    intro: "Protect your accounts, devices and personal information online.",
+    introBn: "অনলাইনে নিজের account, device এবং personal information নিরাপদ রাখুন।",
+    points: [
+      "Use strong, unique passwords.",
+      "Never share passwords or one-time codes with others.",
+      "Be careful with unknown links, files and login pages.",
+    ],
+    pointsBn: [
+      "Strong ও unique password ব্যবহার করুন।",
+      "Password বা one-time code কারও সঙ্গে share করবেন না।",
+      "Unknown link, file এবং login page সম্পর্কে সতর্ক থাকুন।",
+    ],
+    question: "What is the safest response to an unexpected message asking for your OTP?",
+    options: [
+      "Send the OTP",
+      "Post the OTP publicly",
+      "Do not share it and verify the sender through a trusted channel",
+      "Reply with your password instead",
+    ],
+    answer: 2,
+    explanation: "OTP codes are private security credentials. Do not share them; verify suspicious requests independently.",
+  },
+  {
+    id: "social-media",
+    icon: "📱",
+    title: "Responsible Social Media",
+    titleBn: "Responsible Social Media",
+    intro: "Use social platforms thoughtfully, respectfully and with awareness of your digital footprint.",
+    introBn: "Social media চিন্তাশীলভাবে, সম্মানের সঙ্গে এবং নিজের digital footprint মাথায় রেখে ব্যবহার করুন।",
+    points: [
+      "Think before posting or commenting.",
+      "Respect other people's privacy and dignity.",
+      "Remember that online posts can be copied and reshared.",
+    ],
+    pointsBn: [
+      "Post বা comment করার আগে ভাবুন।",
+      "অন্যের privacy এবং dignity সম্মান করুন।",
+      "Online post copy বা reshare হয়ে যেতে পারে—এটা মনে রাখুন।",
+    ],
+    question: "Why should you think before posting something online?",
+    options: [
+      "Because posts can leave a lasting digital footprint",
+      "Because every post gets many likes",
+      "Because the internet never stores anything",
+      "Because comments cannot be shared",
+    ],
+    answer: 0,
+    explanation: "Online content can remain accessible, be copied or reshared, so thoughtful posting matters.",
+  },
+  {
+    id: "responsible-ai",
+    icon: "🤖",
+    title: "Responsible AI Use",
+    titleBn: "AI-এর Responsible Use",
+    intro: "Use AI as a learning aid while checking accuracy, protecting privacy and keeping your own judgement.",
+    introBn: "AI-কে শেখার সহায়ক হিসেবে ব্যবহার করুন, তবে accuracy যাচাই করুন, privacy রক্ষা করুন এবং নিজের judgement বজায় রাখুন।",
+    points: [
+      "Verify important AI-generated information.",
+      "Do not upload sensitive personal information unnecessarily.",
+      "Use AI to support learning, not to replace your own thinking.",
+    ],
+    pointsBn: [
+      "গুরুত্বপূর্ণ AI-generated তথ্য যাচাই করুন।",
+      "অপ্রয়োজনীয়ভাবে sensitive personal information upload করবেন না।",
+      "AI-কে learning support হিসেবে ব্যবহার করুন, নিজের চিন্তাকে replace করতে নয়।",
+    ],
+    question: "What is a responsible way to use AI for schoolwork?",
+    options: [
+      "Copy the answer without checking it",
+      "Use AI output as a starting point and verify it",
+      "Share private data with the AI",
+      "Let AI make every decision for you",
+    ],
+    answer: 1,
+    explanation: "Responsible AI use includes verification, privacy awareness and keeping your own reasoning involved.",
+  },
+  {
+    id: "copyright",
+    icon: "©️",
+    title: "Copyright & Plagiarism",
+    titleBn: "Copyright ও Plagiarism",
+    intro: "Learn to respect creators and give credit when using ideas, words, images or media.",
+    introBn: "অন্যের idea, লেখা, image বা media ব্যবহার করার সময় creator-কে সম্মান করুন এবং credit দিন।",
+    points: [
+      "Give credit to the original creator.",
+      "Use quotation marks for direct quotations and cite sources.",
+      "Create your own work instead of presenting copied work as your own.",
+    ],
+    pointsBn: [
+      "Original creator-কে credit দিন।",
+      "Direct quotation হলে quotation marks ও source দিন।",
+      "Copied work নিজের নামে না দিয়ে নিজের কাজ তৈরি করুন।",
+    ],
+    question: "What is plagiarism?",
+    options: [
+      "Creating your own original work",
+      "Giving credit to a source",
+      "Presenting someone else's work or ideas as your own",
+      "Using a bibliography",
+    ],
+    answer: 2,
+    explanation: "Plagiarism means using another person's work or ideas and presenting them as your own without proper credit.",
+  },
+];
+
+
+// --------------------------------------------------
+// Geography Innovation Zone
+// --------------------------------------------------
+type GeographyInnovationSection =
+  | "classroom"
+  | "living"
+  | "ai"
+  | "gis";
+
+const GEOGRAPHY_INNOVATION_SECTIONS: Record<
+  GeographyInnovationSection,
+  {
+    icon: string;
+    tag: string;
+    title: string;
+    description: string;
+    points: string[];
+  }
+> = {
+  classroom: {
+    icon: "🌍",
+    tag: "DIGITAL CLASSROOM",
+    title: "Digital Geography Classroom",
+    description:
+      "Learn Geography through interactive lessons, animation, simulation, climate and map-based exploration.",
+    points: [
+      "Interactive Geography lessons",
+      "Animation ও simulation",
+      "3D Earth learning",
+      "Climate ও weather concepts",
+      "Maps ও satellite imagery",
+    ],
+  },
+  living: {
+    icon: "🌊",
+    tag: "জ্যান্ত ভূগোল",
+    title: "জ্যান্ত ভূগোল",
+    description:
+      "Real-life events থেকে Geography শেখো—নদীভাঙন, বন্যা, ঘূর্ণিঝড়, ভূমিকম্প ও জলবায়ু পরিবর্তন।",
+    points: [
+      "নদীভাঙন ও নদীর পরিবর্তন",
+      "বন্যা ও ঘূর্ণিঝড়",
+      "ভূমিকম্প",
+      "জলবায়ু পরিবর্তন",
+      "স্থানীয় পরিবেশ",
+    ],
+  },
+  ai: {
+    icon: "🤖",
+    tag: "AI + GEOGRAPHY",
+    title: "AI + Geography",
+    description:
+      "AI-কে Geography learning partner হিসেবে ব্যবহার করে প্রশ্ন, Why-based thinking এবং personal improvement তৈরি করো।",
+    points: [
+      "AI দিয়ে Geography প্রশ্ন করা",
+      "“Why?” ভিত্তিক প্রশ্ন",
+      "AI-assisted learning",
+      "ব্যক্তিগত ভুল বিশ্লেষণ",
+      "Learning recommendation",
+    ],
+  },
+  gis: {
+    icon: "🗺️",
+    tag: "MAP & GIS",
+    title: "Map & GIS Corner",
+    description:
+      "Location, map ও spatial thinking-এর মাধ্যমে Geography-কে আরও বাস্তবভাবে বোঝো।",
+    points: [
+      "Latitude ও longitude",
+      "Map scale",
+      "Interactive maps",
+      "Satellite imagery",
+      "Location-based Geography",
+    ],
+  },
+};
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
 
@@ -424,12 +698,13 @@ function App() {
   );
 
   const t = translations[language];
-
   const [loggedIn, setLoggedIn] = useState(
     !!localStorage.getItem("access_token")
   );
 
-  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(
+    localStorage.getItem("student_profile_saved") === "true"
+  );
 
   const [explorerOpen, setExplorerOpen] = useState(false);
 
@@ -533,6 +808,7 @@ function App() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState("student");
 
   const [className, setClassName] = useState("");
   const [board, setBoard] = useState("");
@@ -542,6 +818,66 @@ function App() {
   const [countryDetails, setCountryDetails] = useState<any>(null);
 
   const [loadingCountry, setLoadingCountry] = useState(false);
+  // Student Impact
+const [impactStats, setImpactStats] = useState({
+  learning: 0,
+  activities: 0,
+  assessments: 0,
+  projects: 0,
+  impactScore: 0,
+});
+
+const [innovationOpen, setInnovationOpen] = useState(false);
+
+const [innovationForm, setInnovationForm] = useState({
+  type: "Geography Model",
+  title: "",
+  description: "",
+});
+
+  // Weather Station + Climate Change Lab
+  const [weatherStationOpen, setWeatherStationOpen] = useState(false);
+  const [climateChangeLabOpen, setClimateChangeLabOpen] = useState(false);
+  // Geography Innovation Zone
+  const [geographyInnovationOpen, setGeographyInnovationOpen] = useState(false);
+  const [geographyInnovationSection, setGeographyInnovationSection] =
+    useState<GeographyInnovationSection>("classroom");
+
+  function openGeographyInnovation(
+    section: GeographyInnovationSection = "classroom"
+  ) {
+    setGeographyInnovationSection(section);
+    setGeographyInnovationOpen(true);
+  }
+
+
+  // Digital Citizenship
+  const [digitalCitizenshipOpen, setDigitalCitizenshipOpen] = useState(false);
+  const [selectedDigitalTopic, setSelectedDigitalTopic] = useState("fake-news");
+  const [digitalAnswer, setDigitalAnswer] = useState<number | null>(null);
+  const [digitalSubmitted, setDigitalSubmitted] = useState(false);
+  const [digitalCompletedTopics, setDigitalCompletedTopics] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("digital_citizenship_completed");
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+    // --------------------------------------------------
+  // Location + Weather
+  // --------------------------------------------------
+
+  const [locationName, setLocationName] = useState("");
+  const [weather, setWeather] = useState<{
+    temperature: number | null;
+    weatherCode: number | null;
+    rain: number;
+    rainChance: number;
+  } | null>(null);
+
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   async function loadCurrentUser() {
     const token = localStorage.getItem("access_token");
@@ -586,10 +922,292 @@ function App() {
     }
   }, []);
 
+    function getWeatherText(code: number | null) {
+    if (code === null) return "Weather unavailable";
+
+    if (code === 0) return "Clear";
+    if ([1, 2, 3].includes(code)) return "Cloudy";
+    if ([45, 48].includes(code)) return "Fog";
+    if ([51, 53, 55, 56, 57].includes(code)) return "Drizzle";
+    if ([61, 63, 65, 66, 67].includes(code)) return "Rain";
+    if ([71, 73, 75, 77].includes(code)) return "Snow";
+    if ([80, 81, 82].includes(code)) return "Rain Showers";
+    if ([95, 96, 99].includes(code)) return "Thunderstorm";
+
+    return "Unknown";
+  }
+
+  function getWeatherIcon(code: number | null) {
+    if (code === null) return "🌥️";
+
+    if (code === 0) return "☀️";
+    if ([1, 2, 3].includes(code)) return "⛅";
+    if ([45, 48].includes(code)) return "🌫️";
+    if ([51, 53, 55, 56, 57].includes(code)) return "🌦️";
+    if ([61, 63, 65, 66, 67].includes(code)) return "🌧️";
+    if ([71, 73, 75, 77].includes(code)) return "❄️";
+    if ([80, 81, 82].includes(code)) return "🌦️";
+    if ([95, 96, 99].includes(code)) return "⛈️";
+
+    return "🌥️";
+  }
+
+  async function loadLocationWeather() {
+    if (!navigator.geolocation) {
+      setLocationName("Location unavailable");
+      return;
+    }
+
+    setWeatherLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        try {
+          // Reverse geocoding: coordinates -> city/country
+          const locationResponse = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10`
+          );
+
+          if (locationResponse.ok) {
+            const locationData = await locationResponse.json();
+            const address = locationData.address || {};
+
+            const city =
+              address.city ||
+              address.town ||
+              address.village ||
+              address.municipality ||
+              address.state ||
+              "Current Location";
+
+            const country = address.country || "";
+
+            setLocationName(
+              country ? `${city}, ${country}` : city
+            );
+          } else {
+            setLocationName("Current Location");
+          }
+
+          // Weather
+          const weatherResponse = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,rain,precipitation&hourly=precipitation_probability&timezone=auto`
+          );
+
+          if (!weatherResponse.ok) {
+            throw new Error("Weather request failed");
+          }
+
+          const weatherData = await weatherResponse.json();
+
+          setWeather({
+            temperature:
+              typeof weatherData.current?.temperature_2m === "number"
+                ? weatherData.current.temperature_2m
+                : null,
+
+            weatherCode:
+              typeof weatherData.current?.weather_code === "number"
+                ? weatherData.current.weather_code
+                : null,
+
+            rain:
+              typeof weatherData.current?.rain === "number"
+                ? weatherData.current.rain
+                : 0,
+
+            rainChance:
+              Array.isArray(
+                weatherData.hourly?.precipitation_probability
+              )
+                ? Number(
+                    weatherData.hourly.precipitation_probability[0] || 0
+                  )
+                : 0,
+          });
+        } catch (error) {
+          console.error("Location/weather error:", error);
+          setLocationName("Weather unavailable");
+          setWeather(null);
+        } finally {
+          setWeatherLoading(false);
+        }
+      },
+      (error) => {
+        console.error("Location permission error:", error);
+        setLocationName("Location permission needed");
+        setWeather(null);
+        setWeatherLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    );
+  }
+  async function loadImpactStats() {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) return;
+
+  try {
+    const response = await fetch(
+      `${API_URL}/student/activity`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) return;
+
+    const activities = await response.json();
+
+    const learning = activities.filter(
+      (item: any) => item.activity_type === "learning"
+    ).length;
+
+    const assessments = activities.filter(
+      (item: any) => item.activity_type === "assessment"
+    ).length;
+
+    const projects = activities.filter(
+      (item: any) => item.activity_type === "innovation"
+    ).length;
+
+    const activityCount = activities.length;
+
+    const totalScore = activities.reduce(
+      (sum: number, item: any) => sum + (item.score || 0),
+      0
+    );
+
+    setImpactStats({
+      learning,
+      activities: activityCount,
+      assessments,
+      projects,
+      impactScore: totalScore,
+    });
+  } catch (error) {
+    console.error("Impact stats error:", error);
+  }
+}
+
+async function submitInnovationProject(
+  e: FormEvent
+) {
+  e.preventDefault();
+
+  const token = localStorage.getItem("access_token");
+
+  if (!token) return;
+
+  try {
+    const response = await fetch(
+      `${API_URL}/student/activity`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          activity_type: "innovation",
+          title: innovationForm.title,
+          score: null,
+          details:
+            `${innovationForm.type}: ${innovationForm.description}`,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Project submission failed");
+    }
+
+    alert("Project submitted successfully! 🚀");
+
+    setInnovationForm({
+      type: "Geography Model",
+      title: "",
+      description: "",
+    });
+
+    setInnovationOpen(false);
+
+    loadImpactStats();
+  } catch (error) {
+    console.error(error);
+    alert("Project submit করা যাচ্ছে না।");
+  }
+}
+
+
+  function openDigitalCitizenship() {
+    setDigitalCitizenshipOpen(true);
+    setSelectedDigitalTopic("fake-news");
+    setDigitalAnswer(null);
+    setDigitalSubmitted(false);
+  }
+
+  function selectDigitalTopic(topicId: string) {
+    setSelectedDigitalTopic(topicId);
+    setDigitalAnswer(null);
+    setDigitalSubmitted(false);
+  }
+
+  async function submitDigitalCitizenshipQuiz() {
+    const topic = DIGITAL_CITIZENSHIP_TOPICS.find(
+      (item) => item.id === selectedDigitalTopic
+    );
+
+    if (!topic || digitalAnswer === null || digitalSubmitted) return;
+
+    const correct = digitalAnswer === topic.answer;
+    const score = correct ? 10 : 0;
+
+    setDigitalSubmitted(true);
+
+    if (!digitalCompletedTopics.includes(topic.id)) {
+      const updated = [...digitalCompletedTopics, topic.id];
+      setDigitalCompletedTopics(updated);
+      localStorage.setItem(
+        "digital_citizenship_completed",
+        JSON.stringify(updated)
+      );
+    }
+
+    await logStudentActivity(
+      "assessment",
+      `Digital Citizenship: ${topic.title}`,
+      score
+    );
+
+    await loadImpactStats();
+    await loadStudentDashboardData();
+  }
+
   function changeLanguage(lang: Language) {
     setLanguage(lang);
     localStorage.setItem("language", lang);
   }
+    useEffect(() => {
+    if (loggedIn && profileSaved) {
+      loadLocationWeather();
+    }
+  }, [loggedIn, profileSaved]);
+
+  useEffect(() => {
+    if (loggedIn && profileSaved) {
+      loadImpactStats();
+    }
+  }, [loggedIn, profileSaved]);
 
   async function getCountryDetails(countryName: string) {
     setLoadingCountry(true);
@@ -681,7 +1299,39 @@ function App() {
     e.preventDefault();
     setMessage("");
 
+    const profileData = {
+      class_name: className.trim(),
+      board: board.trim(),
+      medium: medium.trim(),
+    };
+
+    if (
+      !profileData.class_name ||
+      !profileData.board ||
+      !profileData.medium
+    ) {
+      setMessage("Please fill Class, Board and Medium.");
+      return;
+    }
+
+    // Keep the dashboard transition independent from a temporary
+    // backend/profile response problem.
+    setStudentDashboardProfile(profileData);
+    setProfileSaved(true);
+    localStorage.setItem(
+      "student_profile_saved",
+      "true"
+    );
+    localStorage.setItem(
+      "student_profile_local",
+      JSON.stringify(profileData)
+    );
+
     const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/student-profile`, {
@@ -690,31 +1340,30 @@ function App() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          class_name: className,
-          board,
-          medium,
-        }),
+        body: JSON.stringify(profileData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (
-          response.status === 400 &&
-          data.detail === "Profile already exists"
-        ) {
-          setProfileSaved(true);
-          return;
-        }
-
-        setMessage(data.detail || "Profile save failed");
+        console.error(
+          "Student profile backend save failed:",
+          response.status,
+          data
+        );
         return;
       }
 
-      setProfileSaved(true);
-    } catch {
-      setMessage(t.backendError);
+      setStudentDashboardProfile(
+        data && typeof data === "object" && data.class_name
+          ? data
+          : profileData
+      );
+    } catch (error) {
+      console.error(
+        "Student profile backend connection error:",
+        error
+      );
     }
   }
 
@@ -1522,6 +2171,8 @@ const startQuiz = () => {
 
     setLoggedIn(false);
     setProfileSaved(false);
+    localStorage.removeItem("student_profile_saved");
+    localStorage.removeItem("student_profile_local");
     setExplorerOpen(false);
     setIndiaMapOpen(false);
     setChallengeOpen(false);
@@ -2180,6 +2831,450 @@ const startQuiz = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  // --------------------------------------------------
+  // Geography Innovation Zone
+  // --------------------------------------------------
+
+  // Living Geography
+  // Dedicated interactive simulations for real-world Geography events.
+  if (
+    loggedIn &&
+    profileSaved &&
+    geographyInnovationOpen &&
+    geographyInnovationSection === "living"
+  ) {
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setGeographyInnovationOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <div style={{ marginTop: "18px" }}>
+            <LivingGeography />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Digital Geography Classroom
+  // Keep the existing Geography Innovation Zone unchanged,
+  // but open the dedicated classroom component for the classroom card.
+  if (
+    loggedIn &&
+    profileSaved &&
+    geographyInnovationOpen &&
+    geographyInnovationSection === "classroom"
+  ) {
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setGeographyInnovationOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <div style={{ marginTop: "18px" }}>
+            <DigitalGeographyClassroom />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loggedIn && profileSaved && geographyInnovationOpen) {
+    const activeSection =
+      GEOGRAPHY_INNOVATION_SECTIONS[geographyInnovationSection];
+
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setGeographyInnovationOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <section style={{ ...dashboardHero, marginTop: "18px" }}>
+            <div style={{ flex: 1 }}>
+              <span style={eyebrow}>🌍 GEOGRAPHY INNOVATION</span>
+              <h1
+                style={{
+                  ...heroTitle,
+                  fontSize: "clamp(30px, 4vw, 44px)",
+                }}
+              >
+                Geography Innovation Zone
+              </h1>
+              <p style={heroSubtitle}>
+                Explore Geography through digital lessons, real-world events,
+                AI and maps.
+              </p>
+            </div>
+            <div style={heroOrb}>🗺️</div>
+          </section>
+
+          <div style={learningGrid}>
+            {(
+              Object.entries(GEOGRAPHY_INNOVATION_SECTIONS) as [
+                GeographyInnovationSection,
+                (typeof GEOGRAPHY_INNOVATION_SECTIONS)[GeographyInnovationSection]
+              ][]
+            ).map(([sectionId, section]) => {
+              const active = sectionId === geographyInnovationSection;
+
+              return (
+                <button
+                  key={sectionId}
+                  type="button"
+                  onClick={() => openGeographyInnovation(sectionId)}
+                  style={{
+                    ...learningCard,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border: active
+                      ? "1px solid rgba(125,211,252,0.7)"
+                      : "1px solid rgba(148,163,184,0.16)",
+                    background: active
+                      ? "linear-gradient(145deg, rgba(14,116,144,0.42), rgba(7,27,61,0.92))"
+                      : learningCard.background,
+                  }}
+                >
+                  <div style={learningEmoji}>{section.icon}</div>
+                  <span style={featureTag}>{section.tag}</span>
+                  <h3>{section.title}</h3>
+                  <p>{section.description}</p>
+                  <span style={featureArrow}>Explore →</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <section
+            style={{
+              marginTop: "24px",
+              padding: "28px",
+              borderRadius: "24px",
+              background:
+                "linear-gradient(145deg, rgba(15,23,42,0.94), rgba(7,27,61,0.94))",
+              border: "1px solid rgba(148,163,184,0.16)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: "240px" }}>
+                <span style={featureTag}>{activeSection.tag}</span>
+                <h2 style={{ margin: "8px 0 8px" }}>
+                  {activeSection.icon} {activeSection.title}
+                </h2>
+                <p style={{ opacity: 0.78, lineHeight: 1.7 }}>
+                  {activeSection.description}
+                </p>
+              </div>
+              <div
+                style={{
+                  fontSize: "48px",
+                  lineHeight: 1,
+                  padding: "8px 12px",
+                  borderRadius: "18px",
+                  background: "rgba(30,41,59,0.7)",
+                }}
+              >
+                {activeSection.icon}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "12px",
+                marginTop: "20px",
+              }}
+            >
+              {activeSection.points.map((point) => (
+                <div
+                  key={point}
+                  style={{
+                    padding: "16px",
+                    borderRadius: "16px",
+                    background: "rgba(15,23,42,0.72)",
+                    border: "1px solid rgba(148,163,184,0.12)",
+                  }}
+                >
+                  <strong>✓ {point}</strong>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                marginTop: "22px",
+                padding: "18px",
+                borderRadius: "16px",
+                background: "rgba(14,116,144,0.14)",
+                border: "1px solid rgba(125,211,252,0.16)",
+              }}
+            >
+              <strong>🚀 Next step</strong>
+              <p style={{ marginBottom: 0, opacity: 0.8 }}>
+                এই section-এর পরের ধাপে আমরা interactive lesson, simulation,
+                map/GIS activity এবং AI-based Geography practice একে একে যোগ
+                করব।
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // My Weather Station
+  // --------------------------------------------------
+
+  if (loggedIn && profileSaved && weatherStationOpen) {
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setWeatherStationOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <div style={{ marginTop: "18px" }}>
+            <WeatherStation />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // Climate Change Lab
+  // --------------------------------------------------
+
+  if (loggedIn && profileSaved && climateChangeLabOpen) {
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setClimateChangeLabOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <div style={{ marginTop: "18px" }}>
+            <ClimateChangeLab />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // Digital Citizenship
+  // --------------------------------------------------
+
+  if (loggedIn && profileSaved && digitalCitizenshipOpen) {
+    const topic =
+      DIGITAL_CITIZENSHIP_TOPICS.find(
+        (item) => item.id === selectedDigitalTopic
+      ) || DIGITAL_CITIZENSHIP_TOPICS[0];
+
+    const topicTitle = language === "bn" ? topic.titleBn : topic.title;
+    const topicIntro = language === "bn" ? topic.introBn : topic.intro;
+    const topicPoints = language === "bn" ? topic.pointsBn : topic.points;
+    const isCorrect = digitalSubmitted && digitalAnswer === topic.answer;
+
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setDigitalCitizenshipOpen(false)}
+            style={logoutStyle}
+          >
+            {t.backDashboard}
+          </button>
+
+          <section style={{ ...dashboardHero, marginTop: "18px" }}>
+            <div style={{ flex: 1 }}>
+              <span style={eyebrow}>🌐 LIFE SKILLS</span>
+              <h1 style={{ ...heroTitle, fontSize: "clamp(30px, 4vw, 44px)" }}>
+                Digital Citizenship
+              </h1>
+              <p style={heroSubtitle}>
+                Learn how to stay safe, think critically and act responsibly in the digital world.
+              </p>
+            </div>
+            <div style={heroOrb}>🌐</div>
+          </section>
+
+          <section style={digitalTopicGrid}>
+            {DIGITAL_CITIZENSHIP_TOPICS.map((item) => {
+              const active = item.id === topic.id;
+              const completed = digitalCompletedTopics.includes(item.id);
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectDigitalTopic(item.id)}
+                  style={{
+                    ...digitalTopicCard,
+                    border: active
+                      ? "1px solid rgba(125,211,252,0.65)"
+                      : digitalTopicCard.border,
+                    background: active
+                      ? "linear-gradient(145deg, rgba(14,116,144,0.42), rgba(7,27,61,0.92))"
+                      : digitalTopicCard.background,
+                  }}
+                >
+                  <div style={digitalTopicTopRow}>
+                    <span style={digitalTopicIcon}>{item.icon}</span>
+                    {completed && <span style={digitalCompletedBadge}>✓ Done</span>}
+                  </div>
+                  <strong style={digitalTopicTitle}>
+                    {language === "bn" ? item.titleBn : item.title}
+                  </strong>
+                  <span style={digitalTopicOpenLabel}>
+                    {active ? "Learning now" : "Explore topic →"}
+                  </span>
+                </button>
+              );
+            })}
+          </section>
+
+          <section style={digitalLessonCard}>
+            <div style={digitalLessonHeader}>
+              <div>
+                <span style={featureTag}>TOPIC</span>
+                <h2 style={{ margin: "6px 0 0" }}>{topic.icon} {topicTitle}</h2>
+              </div>
+              <div style={digitalLessonCounter}>
+                {digitalCompletedTopics.length}/{DIGITAL_CITIZENSHIP_TOPICS.length}
+              </div>
+            </div>
+
+            <p style={digitalLessonIntro}>{topicIntro}</p>
+
+            <div style={digitalPointsBox}>
+              <h3 style={{ marginTop: 0 }}>💡 Key Points</h3>
+              <ul style={{ marginBottom: 0, lineHeight: 1.75 }}>
+                {topicPoints.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={digitalQuizBox}>
+              <span style={featureTag}>MINI CHECK</span>
+              <h3 style={{ margin: "6px 0 14px" }}>🧠 {topic.question}</h3>
+
+              <div style={digitalAnswerGrid}>
+                {topic.options.map((option, index) => {
+                  const selected = digitalAnswer === index;
+                  const correctOption = digitalSubmitted && index === topic.answer;
+                  const wrongOption =
+                    digitalSubmitted && selected && index !== topic.answer;
+
+                  return (
+                    <button
+                      key={`${topic.id}-${index}`}
+                      type="button"
+                      disabled={digitalSubmitted}
+                      onClick={() => setDigitalAnswer(index)}
+                      style={{
+                        ...digitalAnswerButton,
+                        border: correctOption
+                          ? "1px solid rgba(74,222,128,0.65)"
+                          : wrongOption
+                            ? "1px solid rgba(248,113,113,0.60)"
+                            : selected
+                              ? "2px solid #60a5fa"
+                              : digitalAnswerButton.border,
+                        background: correctOption
+                          ? "rgba(22,101,52,0.58)"
+                          : wrongOption
+                            ? "rgba(127,29,29,0.58)"
+                            : selected
+                              ? "rgba(37,99,235,0.48)"
+                              : digitalAnswerButton.background,
+                      }}
+                    >
+                      <span style={curiosityOptionLetter}>
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      <span>{option}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!digitalSubmitted ? (
+                <button
+                  type="button"
+                  onClick={submitDigitalCitizenshipQuiz}
+                  disabled={digitalAnswer === null}
+                  style={{
+                    ...curiositySubmitButton,
+                    marginTop: "16px",
+                    opacity: digitalAnswer === null ? 0.55 : 1,
+                  }}
+                >
+                  Check Answer →
+                </button>
+              ) : (
+                <div
+                  style={{
+                    ...digitalResultBox,
+                    background: isCorrect
+                      ? "rgba(22,101,52,0.28)"
+                      : "rgba(127,29,29,0.28)",
+                    border: isCorrect
+                      ? "1px solid rgba(74,222,128,0.28)"
+                      : "1px solid rgba(248,113,113,0.25)",
+                  }}
+                >
+                  <h3 style={{ margin: 0 }}>
+                    {isCorrect ? "🎉 Correct! +10 Impact Points" : "❌ Not quite — keep learning!"}
+                  </h3>
+                  <p style={{ margin: "8px 0 0", lineHeight: 1.6 }}>
+                    💡 {topic.explanation}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -3049,6 +4144,48 @@ const startQuiz = () => {
               </div>
 
               <div
+                style={{ ...featureCard, ...digitalCitizenshipFeatureCard }}
+                onClick={openDigitalCitizenship}
+                role="button"
+                tabIndex={0}
+              >
+                <div style={featureIcon}>🌐</div>
+                <span style={featureTag}>LIFE SKILLS</span>
+                <h3>Digital Citizenship</h3>
+                <p>Learn to verify information, stay safe online and use AI responsibly.</p>
+                <div style={digitalCitizenshipProgress}>
+                  {digitalCompletedTopics.length} / {DIGITAL_CITIZENSHIP_TOPICS.length} topics completed
+                </div>
+                <span style={featureArrow}>→</span>
+              </div>
+
+              <div
+                style={{ ...featureCard, background: "linear-gradient(145deg, rgba(14,116,144,0.36), rgba(7,27,61,0.92))" }}
+                onClick={() => setWeatherStationOpen(true)}
+                role="button"
+                tabIndex={0}
+              >
+                <div style={featureIcon}>🌦️</div>
+                <span style={featureTag}>WEATHER</span>
+                <h3>My Weather Station</h3>
+                <p>Check your local weather, rainfall, wind and save daily observations.</p>
+                <span style={featureArrow}>→</span>
+              </div>
+
+              <div
+                style={{ ...featureCard, background: "linear-gradient(145deg, rgba(30,64,175,0.36), rgba(7,27,61,0.92))" }}
+                onClick={() => setClimateChangeLabOpen(true)}
+                role="button"
+                tabIndex={0}
+              >
+                <div style={featureIcon}>🌍</div>
+                <span style={featureTag}>CLIMATE LAB</span>
+                <h3>Climate Change Lab</h3>
+                <p>Explore global warming, greenhouse effect, El Niño, IOD, MJO and extreme weather.</p>
+                <span style={featureArrow}>→</span>
+              </div>
+
+              <div
                 style={featureCard}
                 onClick={() => setExplorerOpen(true)}
                 role="button"
@@ -3111,6 +4248,217 @@ const startQuiz = () => {
               </button>
             </aside>
           </section>
+          {/* ---------------------------------------- */}
+          {/* Student Innovation Zone */}
+          {/* ---------------------------------------- */}
+
+          <h2 style={{ marginTop: "30px" }}>
+            🚀 Student Innovation Zone
+          </h2>
+
+          <div style={learningGrid}>
+            <div style={learningCard}>
+              <div style={learningEmoji}>🚀</div>
+
+              <h3>Student Innovation Zone</h3>
+
+              <p>নিজের Geography / Science project জমা দিন।</p>
+
+              <p>• Geography Model</p>
+              <p>• Poster</p>
+              <p>• Short Video</p>
+              <p>• Map</p>
+              <p>• Environmental Solution</p>
+              <p>• Science/Geography Experiment</p>
+
+              <button
+                type="button"
+                style={exploreButton}
+                onClick={() => setInnovationOpen(true)}
+              >
+                + Submit Project
+              </button>
+            </div>
+          </div>
+
+          {/* ---------------------------------------- */}
+          {/* Geography Innovation Zone */}
+          {/* ---------------------------------------- */}
+
+          <h2 style={{ marginTop: "30px" }}>
+            🌍 Geography Innovation Zone
+          </h2>
+
+          <p style={{ marginTop: "-8px", opacity: 0.72 }}>
+            Geography-কে বাস্তব, digital, AI ও map-based learning-এর মাধ্যমে explore করুন।
+          </p>
+
+          <div style={learningGrid}>
+            {(
+              Object.entries(GEOGRAPHY_INNOVATION_SECTIONS) as [
+                GeographyInnovationSection,
+                (typeof GEOGRAPHY_INNOVATION_SECTIONS)[GeographyInnovationSection]
+              ][]
+            ).map(([sectionId, section]) => (
+              <div
+                key={sectionId}
+                style={{
+                  ...learningCard,
+                  cursor: "pointer",
+                  background:
+                    "linear-gradient(145deg, rgba(14,116,144,0.28), rgba(7,27,61,0.92))",
+                }}
+                onClick={() => openGeographyInnovation(sectionId)}
+                role="button"
+                tabIndex={0}
+              >
+                <div style={learningEmoji}>{section.icon}</div>
+                <span style={featureTag}>{section.tag}</span>
+                <h3>{section.title}</h3>
+                <p>{section.description}</p>
+                <span style={featureArrow}>→</span>
+              </div>
+            ))}
+          </div>
+
+          {/* ---------------------------------------- */}
+          {/* My Impact */}
+          {/* ---------------------------------------- */}
+
+          <div style={impactCard}>
+            <h2>⭐ My Impact</h2>
+
+            <p>
+              Before Learning → Activity → Assessment → Impact
+            </p>
+
+            <div style={impactGrid}>
+              <div style={impactItem}>
+                <strong>{impactStats.learning}</strong>
+                <span>Learning</span>
+              </div>
+
+              <div style={impactItem}>
+                <strong>{impactStats.activities}</strong>
+                <span>Activities</span>
+              </div>
+
+              <div style={impactItem}>
+                <strong>{impactStats.assessments}</strong>
+                <span>Assessments</span>
+              </div>
+
+              <div style={impactItem}>
+                <strong>{impactStats.projects}</strong>
+                <span>Projects</span>
+              </div>
+
+              <div style={impactItem}>
+                <strong>{impactStats.impactScore}</strong>
+                <span>Impact Score</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Innovation project submit popup */}
+
+          {innovationOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(2, 6, 23, 0.75)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+                zIndex: 9999,
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "550px",
+                  background: "#111827",
+                  color: "white",
+                  borderRadius: "20px",
+                  padding: "28px",
+                  boxSizing: "border-box",
+                  boxShadow: "0 25px 80px rgba(0,0,0,0.45)",
+                }}
+              >
+                <h2>🚀 Submit Innovation Project</h2>
+
+                <form onSubmit={submitInnovationProject}>
+                  <select
+                    style={inputStyle}
+                    value={innovationForm.type}
+                    onChange={(e) =>
+                      setInnovationForm({
+                        ...innovationForm,
+                        type: e.target.value,
+                      })
+                    }
+                  >
+                    <option>Geography Model</option>
+                    <option>Poster</option>
+                    <option>Short Video</option>
+                    <option>Map</option>
+                    <option>Environmental Solution</option>
+                    <option>Science/Geography Experiment</option>
+                  </select>
+
+                  <input
+                    style={inputStyle}
+                    placeholder="Project title"
+                    value={innovationForm.title}
+                    onChange={(e) =>
+                      setInnovationForm({
+                        ...innovationForm,
+                        title: e.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <textarea
+                    style={{
+                      ...inputStyle,
+                      minHeight: "120px",
+                      resize: "vertical" as const,
+                    }}
+                    placeholder="Describe your project"
+                    value={innovationForm.description}
+                    onChange={(e) =>
+                      setInnovationForm({
+                        ...innovationForm,
+                        description: e.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <button
+                    type="submit"
+                    style={buttonStyle}
+                  >
+                    Submit Project 🚀
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInnovationOpen(false)}
+                    style={{
+                      ...buttonStyle,
+                      background: "#475569",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
 
           {!notificationsEnabled && (
             <section style={notificationPermissionCard}>
@@ -3942,6 +5290,22 @@ const startQuiz = () => {
               <label style={authLabel}>🔒 {t.password}</label>
               <input type="password" placeholder={t.password} value={password} onChange={(e) => setPassword(e.target.value)} required style={authInput} />
             </div>
+
+            {!isLogin && (
+              <div style={authFieldGroup}>
+                <label style={authLabel}>👤 {t.role}</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  required
+                  style={{ ...authInput, cursor: "pointer" }}
+                >
+                  <option value="student">{t.studentRole}</option>
+                  <option value="teacher">{t.teacherRole}</option>
+                </select>
+              </div>
+            )}
+
             <button type="submit" style={authSubmitButton}>
               <span>{isLogin ? "🚀 Login to Dashboard" : "✨ Create Account"}</span>
               <span style={authButtonArrow}>→</span>
@@ -3952,7 +5316,7 @@ const startQuiz = () => {
 
           <div style={authSwitchArea}>
             <div style={authDivider}><span style={authDividerLine}></span><small>{isLogin ? "New Explorer?" : "Already an Explorer?"}</small><span style={authDividerLine}></span></div>
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setMessage(""); setPassword(""); }} style={authSwitchButton}>{isLogin ? "Create a new account →" : "← Back to Login"}</button>
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setMessage(""); setPassword(""); setSelectedRole("student"); }} style={authSwitchButton}>{isLogin ? "Create a new account →" : "← Back to Login"}</button>
           </div>
           <p style={authFooter}>🌍 Learn • Explore • Discover</p>
         </div>
@@ -4153,6 +5517,31 @@ const learningCard = {
   border: "1px solid rgba(96,165,250,0.16)",
   boxShadow: "0 16px 40px rgba(0,0,0,0.18)",
 };
+const impactCard = {
+  marginTop: "30px",
+  padding: "25px",
+  borderRadius: "18px",
+  background: "#1e293b",
+};
+
+const impactGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, 1fr)",
+  gap: "15px",
+  marginTop: "20px",
+};
+
+const impactItem = {
+  padding: "18px",
+  borderRadius: "14px",
+  background: "#0f172a",
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+  gap: "6px",
+};
+
+
 
 const learningEmoji = {
   fontSize: "42px",
@@ -4390,6 +5779,149 @@ const featureCard = {
   transition: "transform 0.2s ease, border-color 0.2s ease",
   boxSizing: "border-box" as const,
 };
+
+const digitalCitizenshipFeatureCard = {
+  background:
+    "linear-gradient(145deg, rgba(8,78,98,0.84), rgba(7,27,61,0.90))",
+};
+
+const digitalCitizenshipProgress = {
+  marginTop: "16px",
+  color: "#a5f3fc",
+  fontSize: "12px",
+  fontWeight: 700,
+};
+
+const digitalTopicGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "14px",
+  marginTop: "20px",
+};
+
+const digitalTopicCard = {
+  minHeight: "145px",
+  padding: "18px",
+  borderRadius: "17px",
+  border: "1px solid rgba(96,165,250,0.16)",
+  background: "rgba(15,23,42,0.78)",
+  color: "white",
+  textAlign: "left" as const,
+  cursor: "pointer",
+  boxShadow: "0 14px 38px rgba(0,0,0,0.16)",
+};
+
+const digitalTopicTopRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "10px",
+};
+
+const digitalTopicIcon = {
+  fontSize: "32px",
+};
+
+const digitalCompletedBadge = {
+  padding: "5px 8px",
+  borderRadius: "999px",
+  background: "rgba(34,197,94,0.14)",
+  color: "#86efac",
+  fontSize: "10px",
+  fontWeight: 800,
+};
+
+const digitalTopicTitle = {
+  display: "block",
+  marginTop: "14px",
+  fontSize: "17px",
+  lineHeight: 1.3,
+};
+
+const digitalTopicOpenLabel = {
+  display: "block",
+  marginTop: "10px",
+  color: "#7dd3fc",
+  fontSize: "11px",
+  fontWeight: 700,
+};
+
+const digitalLessonCard = {
+  marginTop: "18px",
+  padding: "24px",
+  borderRadius: "20px",
+  background: "rgba(15,23,42,0.78)",
+  border: "1px solid rgba(96,165,250,0.18)",
+  boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
+};
+
+const digitalLessonHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "14px",
+};
+
+const digitalLessonCounter = {
+  padding: "8px 12px",
+  borderRadius: "999px",
+  background: "rgba(14,165,233,0.12)",
+  color: "#7dd3fc",
+  fontSize: "11px",
+  fontWeight: 800,
+  whiteSpace: "nowrap" as const,
+};
+
+const digitalLessonIntro = {
+  margin: "14px 0 0",
+  color: "#cbd5e1",
+  lineHeight: 1.65,
+};
+
+const digitalPointsBox = {
+  marginTop: "18px",
+  padding: "18px",
+  borderRadius: "15px",
+  background: "rgba(2,6,23,0.32)",
+  border: "1px solid rgba(148,163,184,0.10)",
+};
+
+const digitalQuizBox = {
+  marginTop: "18px",
+  padding: "18px",
+  borderRadius: "15px",
+  background: "rgba(7,27,61,0.56)",
+  border: "1px solid rgba(125,211,252,0.12)",
+};
+
+const digitalAnswerGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "10px",
+};
+
+const digitalAnswerButton = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "13px",
+  borderRadius: "12px",
+  border: "1px solid rgba(148,163,184,0.16)",
+  background: "rgba(2,6,23,0.34)",
+  color: "white",
+  textAlign: "left" as const,
+  cursor: "pointer",
+  fontSize: "14px",
+  lineHeight: 1.45,
+};
+
+const digitalResultBox = {
+  marginTop: "16px",
+  padding: "16px",
+  borderRadius: "14px",
+};
+
 
 const featureIcon = {
   fontSize: "34px",
