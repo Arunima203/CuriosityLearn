@@ -195,7 +195,7 @@ const QUIZ_QUESTIONS = [
   },
 ];
 
-export default function DigitalGeographyClassroom() {
+export default function DigitalGeographyClassroom({ onActivityLog }: { onActivityLog?: (title: string, score: number) => void }) {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedContinent, setSelectedContinent] =
     useState<Continent | null>(null);
@@ -252,6 +252,8 @@ export default function DigitalGeographyClassroom() {
     if (quizIndex < QUIZ_QUESTIONS.length - 1) {
       setQuizIndex((index) => index + 1);
     } else {
+      const finalScore = Math.round((quizScore / QUIZ_QUESTIONS.length) * 100);
+      onActivityLog?.(`Digital Geography Classroom Quiz`, finalScore);
       setMode("learn");
     }
   }
@@ -917,12 +919,12 @@ const lessonVisualCaptionStyle: React.CSSProperties = {
   opacity: 0.86,
 };
 
-const lessonContentGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 300px",
-  gap: "18px",
-  marginTop: "18px",
-};
+// const lessonContentGridStyle: React.CSSProperties = {
+//   display: "grid",
+//   gridTemplateColumns: "minmax(0, 1fr) 300px",
+//   gap: "18px",
+//   marginTop: "18px",
+// };
 
 const lessonSectionCardStyle: React.CSSProperties = {
   padding: "24px",
@@ -1089,11 +1091,11 @@ const secondaryButtonStyle: React.CSSProperties = {
   color: "white",
 };
 
-const topicGridStyle: React.CSSProperties = {
-  display: "grid",
-  gap: "10px",
-  marginTop: "12px",
-};
+// const topicGridStyle: React.CSSProperties = {
+//   display: "grid",
+//   gap: "10px",
+//   marginTop: "12px",
+// };
 
 const topicStyle: React.CSSProperties = {
   padding: "13px 15px",

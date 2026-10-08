@@ -13,6 +13,8 @@ import ClimateChangeLab from "./components/ClimateChangeLab";
 import WeatherStation from "./components/WeatherStation";
 import DigitalGeographyClassroom from "./components/DigitalGeographyClassroom";
 import LivingGeography from "./components/LivingGeography";
+import GeographyAIChat from "./components/GeographyAIChat";
+
 
 
 const API_URL = "http://127.0.0.1:8000";
@@ -54,7 +56,7 @@ const translations = {
     tryAgain: "❌ Not quite! Try again.",
     nextChallenge: "🎯 Next Challenge",
     returnIndiaMap: "← Return to India Map",
-    welcomeBack: "Welcome back 👋",
+    welcomeBack: "Welcome to SRK classes 👋",
     readyExplore: "Ready to explore the world?",
     discoverPlaces: "Discover places, maps and amazing facts.",
     geography: "Geography",
@@ -121,6 +123,11 @@ const translations = {
     curiosityHistoryEmpty: "Answer your first curiosity question to start your journey.",
     curiosityLoadFailed: "Today's curiosity is not available yet.",
     curiosityRetry: "Try Again",
+    aiChatTitle: "Geography AI Tutor",
+    aiChatSubtitle: "Ask me anything about Geography!",
+    aiChatTag: "AI TUTOR",
+    aiChatDesc: "Chat with your personal AI Geography tutor — get explanations, quizzes and tips.",
+    aiChatBack: "← Back to Dashboard",
   },
 
   bn: {
@@ -227,6 +234,11 @@ const translations = {
     curiosityHistoryEmpty: "প্রথম Curiosity প্রশ্নের উত্তর দিয়ে আপনার journey শুরু করুন।",
     curiosityLoadFailed: "আজকের Curiosity এখনো পাওয়া যায়নি।",
     curiosityRetry: "আবার চেষ্টা করুন",
+    aiChatTitle: "Geography AI টিউটর",
+    aiChatSubtitle: "Geography সম্পর্কে যেকোনো প্রশ্ন করুন!",
+    aiChatTag: "AI টিউটর",
+    aiChatDesc: "আপনার personal AI Geography টিউটরের সাথে chat করুন — ব্যাখ্যা, quiz এবং tips পান।",
+    aiChatBack: "← ড্যাশবোর্ডে ফিরে যান",
   },
 };
 
@@ -345,39 +357,192 @@ const locationData: Record<
   India: {
     famousPlaces: ["Taj Mahal", "Red Fort", "Gateway of India"],
     geography: ["Himalayas", "Thar Desert", "Ganges River"],
-    fact: "India has a wide variety of landscapes, from mountains and deserts to river plains and coasts.",
+    fact: "India has the world's largest democracy and an extraordinary variety of landscapes.",
   },
-
+  "Andhra Pradesh": {
+    famousPlaces: ["Tirumala Temple", "Charminar (Hyderabad)", "Araku Valley"],
+    geography: ["Eastern Ghats", "Bay of Bengal Coast", "Krishna & Godavari Rivers"],
+    fact: "Andhra Pradesh has one of the longest coastlines in India at about 974 km.",
+  },
+  "Arunachal Pradesh": {
+    famousPlaces: ["Tawang Monastery", "Ziro Valley", "Namdapha National Park"],
+    geography: ["Eastern Himalayas", "Brahmaputra Tributaries", "Dense Forests"],
+    fact: "Arunachal Pradesh is India's largest northeastern state and shares borders with China, Bhutan and Myanmar.",
+  },
+  Assam: {
+    famousPlaces: ["Kaziranga National Park", "Kamakhya Temple", "Majuli Island"],
+    geography: ["Brahmaputra Valley", "Barak Valley", "Shillong Plateau"],
+    fact: "Assam's Kaziranga is home to two-thirds of the world's one-horned rhinoceroses.",
+  },
+  Bihar: {
+    famousPlaces: ["Bodh Gaya", "Nalanda", "Vaishali"],
+    geography: ["Gangetic Plains", "Ganges River", "Son River"],
+    fact: "Bihar is one of the oldest continuously inhabited places in the world and the birthplace of Buddhism.",
+  },
+  Chhattisgarh: {
+    famousPlaces: ["Chitrakote Falls", "Bastar", "Sirpur"],
+    geography: ["Dandakaranya Forest", "Mahanadi River", "Satpura Ranges"],
+    fact: "Chhattisgarh has the highest proportion of tribal population among large Indian states.",
+  },
+  Goa: {
+    famousPlaces: ["Baga Beach", "Basilica of Bom Jesus", "Dudhsagar Falls"],
+    geography: ["Konkan Coast", "Western Ghats", "Mandovi River"],
+    fact: "Goa is India's smallest state by area and has a strong Portuguese colonial heritage.",
+  },
+  Gujarat: {
+    famousPlaces: ["Gir National Park", "Rann of Kutch", "Somnath Temple"],
+    geography: ["Thar Desert", "Gulf of Kutch", "Sabarmati River"],
+    fact: "Gujarat's Rann of Kutch is the world's largest salt desert.",
+  },
+  Haryana: {
+    famousPlaces: ["Kurukshetra", "Sultanpur Bird Sanctuary", "Morni Hills"],
+    geography: ["Indo-Gangetic Plain", "Aravalli Range", "Yamuna River"],
+    fact: "Haryana is one of the wealthiest states in India and surrounds the national capital Delhi on three sides.",
+  },
+  "Himachal Pradesh": {
+    famousPlaces: ["Shimla", "Manali", "Dharamshala"],
+    geography: ["Western Himalayas", "Beas River", "Pir Panjal Range"],
+    fact: "Himachal Pradesh is known as 'Dev Bhoomi' (Land of Gods) because of its numerous temples and monasteries.",
+  },
+  Jharkhand: {
+    famousPlaces: ["Hundru Falls", "Betla National Park", "Deoghar"],
+    geography: ["Chota Nagpur Plateau", "Damodar River", "Mineral-rich Plateau"],
+    fact: "Jharkhand holds about 40% of India's mineral resources including coal, iron ore and copper.",
+  },
+  Karnataka: {
+    famousPlaces: ["Mysore Palace", "Hampi", "Coorg"],
+    geography: ["Deccan Plateau", "Western Ghats", "Cauvery River"],
+    fact: "Karnataka's Western Ghats are a UNESCO World Heritage Site and a global biodiversity hotspot.",
+  },
+  Kerala: {
+    famousPlaces: ["Alleppey Backwaters", "Munnar", "Periyar National Park"],
+    geography: ["Western Ghats", "Arabian Sea Coast", "Backwaters"],
+    fact: "Kerala has the highest literacy rate in India and its backwaters are a unique network of lagoons and lakes.",
+  },
+  "Madhya Pradesh": {
+    famousPlaces: ["Khajuraho", "Sanchi Stupa", "Kanha National Park"],
+    geography: ["Vindhya Range", "Narmada River", "Satpura Range"],
+    fact: "Madhya Pradesh is called the 'Heart of India' and has the highest number of tiger reserves in the country.",
+  },
+  Maharashtra: {
+    famousPlaces: ["Gateway of India", "Ajanta & Ellora Caves", "Lonavala"],
+    geography: ["Deccan Plateau", "Konkan Coast", "Western Ghats"],
+    fact: "Maharashtra's Mumbai is India's financial capital and has the Dharavi — one of Asia's largest urban settlements.",
+  },
+  Manipur: {
+    famousPlaces: ["Loktak Lake", "Kangla Fort", "Keibul Lamjao National Park"],
+    geography: ["Imphal Valley", "Barail Range", "Barak River"],
+    fact: "Manipur's Loktak Lake is the largest freshwater lake in northeastern India and has floating islands called Phumdis.",
+  },
+  Meghalaya: {
+    famousPlaces: ["Cherrapunji", "Living Root Bridges", "Dawki River"],
+    geography: ["Shillong Plateau", "Khasi Hills", "Garo Hills"],
+    fact: "Cherrapunji in Meghalaya holds the record for the highest annual rainfall on Earth.",
+  },
+  Mizoram: {
+    famousPlaces: ["Aizawl", "Phawngpui Peak", "Palak Lake"],
+    geography: ["Lushai Hills", "Chhimtuipui River", "Dense Bamboo Forests"],
+    fact: "Mizoram has one of the highest literacy rates in India and over 90% of the land is forested.",
+  },
+  Nagaland: {
+    famousPlaces: ["Hornbill Festival", "Kohima War Cemetery", "Dzukou Valley"],
+    geography: ["Naga Hills", "Doyang River", "Dense Forest"],
+    fact: "Nagaland is called the 'Land of Festivals' and the Hornbill Festival showcases all Naga tribes together.",
+  },
+  Odisha: {
+    famousPlaces: ["Jagannath Temple", "Konark Sun Temple", "Chilika Lake"],
+    geography: ["Eastern Coastal Plains", "Chilika Lagoon", "Bay of Bengal Coast"],
+    fact: "Odisha has a long coastline and is home to the famous Chilika Lagoon — Asia's largest brackish water lagoon.",
+  },
+  Punjab: {
+    famousPlaces: ["Golden Temple", "Jallianwala Bagh", "Wagah Border"],
+    geography: ["Indo-Gangetic Plain", "Sutlej River", "Five Rivers (Punjab)"],
+    fact: "Punjab is India's bread basket — it produces about 50% of India's wheat.",
+  },
+  Rajasthan: {
+    famousPlaces: ["Amber Fort", "Hawa Mahal", "Jaisalmer Fort"],
+    geography: ["Thar Desert", "Aravalli Range", "Luni River"],
+    fact: "Rajasthan is India's largest state by area and the Thar Desert covers most of its western region.",
+  },
+  Sikkim: {
+    famousPlaces: ["Kangchenjunga", "Gurudongmar Lake", "Rumtek Monastery"],
+    geography: ["Eastern Himalayas", "Teesta River", "High-altitude Lakes"],
+    fact: "Kangchenjunga in Sikkim is the world's third-highest mountain at 8,586 m.",
+  },
+  "Tamil Nadu": {
+    famousPlaces: ["Meenakshi Temple", "Marina Beach", "Ooty"],
+    geography: ["Eastern Ghats", "Western Ghats", "Cauvery River"],
+    fact: "Marina Beach in Chennai is the second longest urban beach in the world at 13 km.",
+  },
+  Telangana: {
+    famousPlaces: ["Charminar", "Golconda Fort", "Nagarjuna Sagar"],
+    geography: ["Deccan Plateau", "Krishna River", "Godavari River"],
+    fact: "Hyderabad, the capital of Telangana, is known as 'Cyberabad' for being India's top IT hub.",
+  },
+  Tripura: {
+    famousPlaces: ["Ujjayanta Palace", "Neermahal", "Unakoti"],
+    geography: ["Barail Range", "Haora River", "Tropical Forest"],
+    fact: "Tripura is surrounded by Bangladesh on three sides, making it one of India's most unique border states.",
+  },
+  "Uttar Pradesh": {
+    famousPlaces: ["Taj Mahal", "Varanasi Ghats", "Mathura"],
+    geography: ["Gangetic Plains", "Ganges & Yamuna Rivers", "Vindhya Hills"],
+    fact: "Uttar Pradesh is India's most populous state and home to the Taj Mahal, one of the Seven Wonders of the World.",
+  },
+  Uttarakhand: {
+    famousPlaces: ["Kedarnath", "Badrinath", "Valley of Flowers"],
+    geography: ["Central Himalayas", "Garhwal & Kumaon Hills", "Glaciers"],
+    fact: "Uttarakhand is called 'Dev Bhoomi' and is the source of the sacred Ganges and Yamuna rivers.",
+  },
   "West Bengal": {
     famousPlaces: ["Victoria Memorial", "Sundarbans", "Darjeeling"],
     geography: ["Ganges Delta", "Mangrove Forest", "Himalayan Foothills"],
-    fact: "The Sundarbans lies in the Ganges delta and is famous for its mangrove ecosystem.",
+    fact: "The Sundarbans in West Bengal is the world's largest mangrove forest and a UNESCO World Heritage Site.",
   },
-
-  Odisha: {
-    famousPlaces: [
-      "Jagannath Temple",
-      "Konark Sun Temple",
-      "Chilika Lake",
-    ],
-    geography: [
-      "Eastern Coastal Plains",
-      "Chilika Lagoon",
-      "Bay of Bengal Coast",
-    ],
-    fact: "Odisha has a long coastline and is home to the famous Chilika Lagoon.",
+  Delhi: {
+    famousPlaces: ["Red Fort", "India Gate", "Qutub Minar"],
+    geography: ["Yamuna River", "Indo-Gangetic Plain", "Aravalli Ridge"],
+    fact: "Delhi is one of the world's oldest continually inhabited cities with a history spanning over 5,000 years.",
   },
-
-  Rajasthan: {
-    famousPlaces: ["Amber Fort", "Hawa Mahal", "Jaisalmer Fort"],
-    geography: ["Thar Desert", "Aravalli Range"],
-    fact: "The Thar Desert covers a large part of western Rajasthan.",
+  "Jammu and Kashmir": {
+    famousPlaces: ["Dal Lake", "Vaishno Devi", "Gulmarg"],
+    geography: ["Himalayas", "Jhelum River", "Kashmir Valley"],
+    fact: "The Kashmir Valley, framed by the Himalayas and Pir Panjal range, is often called 'Paradise on Earth'.",
   },
-
-  Uttarakhand: {
-    famousPlaces: ["Kedarnath", "Badrinath", "Valley of Flowers"],
-    geography: ["Himalayas", "Mountain Valleys", "Glaciers"],
-    fact: "Uttarakhand is a Himalayan state with many high-altitude valleys and peaks.",
+  "Jammu & Kashmir": {
+    famousPlaces: ["Dal Lake", "Vaishno Devi", "Gulmarg"],
+    geography: ["Himalayas", "Jhelum River", "Kashmir Valley"],
+    fact: "The Kashmir Valley, framed by the Himalayas and Pir Panjal range, is often called 'Paradise on Earth'.",
+  },
+  Ladakh: {
+    famousPlaces: ["Pangong Lake", "Hemis Monastery", "Nubra Valley"],
+    geography: ["Trans-Himalayan Region", "Indus River", "Cold Desert"],
+    fact: "Ladakh is one of the world's highest inhabited regions with many areas above 5,000 m altitude.",
+  },
+  "Andaman and Nicobar": {
+    famousPlaces: ["Radhanagar Beach", "Cellular Jail", "Barren Island Volcano"],
+    geography: ["Bay of Bengal Islands", "Coral Reefs", "Tropical Forest"],
+    fact: "Barren Island in the Andaman archipelago is South Asia's only confirmed active volcano.",
+  },
+  Chandigarh: {
+    famousPlaces: ["Rock Garden", "Sukhna Lake", "Capitol Complex"],
+    geography: ["Shivalik Foothills", "Ghaggar River"],
+    fact: "Chandigarh was designed by Swiss-French architect Le Corbusier and is a UNESCO World Heritage Site.",
+  },
+  "Dadra and Nagar Haveli and Daman and Diu": {
+    famousPlaces: ["Diu Fort", "Naida Caves", "Vanganga Lake"],
+    geography: ["Arabian Sea Coast", "Daman Ganga River"],
+    fact: "This union territory was a Portuguese colony until 1961 and retains distinct Lusophone heritage.",
+  },
+  Lakshadweep: {
+    famousPlaces: ["Agatti Island", "Bangaram Atoll", "Minicoy Island"],
+    geography: ["Arabian Sea Coral Islands", "Lagoons", "Coral Reefs"],
+    fact: "Lakshadweep is India's smallest union territory and consists entirely of coral atolls and reefs.",
+  },
+  Puducherry: {
+    famousPlaces: ["Auroville", "French Quarter", "Arikamedu"],
+    geography: ["Coromandel Coast", "Bay of Bengal", "Gingee River"],
+    fact: "Puducherry retains strong French colonial character and Auroville is an experimental international township.",
   },
 };
 
@@ -698,7 +863,7 @@ function App() {
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [_quizLoading, setQuizLoading] = useState(false);
 
   // --------------------------------------------------
   // Daily Geography Curiosity
@@ -712,7 +877,9 @@ function App() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => localStorage.getItem("notifications_enabled") === "true"
+  );
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
 
@@ -821,6 +988,8 @@ const [innovationForm, setInnovationForm] = useState({
   // Weather Station + Climate Change Lab
   const [weatherStationOpen, setWeatherStationOpen] = useState(false);
   const [climateChangeLabOpen, setClimateChangeLabOpen] = useState(false);
+  // AI Chat
+  const [aiChatOpen, setAiChatOpen] = useState(false);
   // Geography Innovation Zone
   const [geographyInnovationOpen, setGeographyInnovationOpen] = useState(false);
   const [geographyInnovationSection, setGeographyInnovationSection] =
@@ -852,15 +1021,15 @@ const [innovationForm, setInnovationForm] = useState({
   // Location + Weather
   // --------------------------------------------------
 
-  const [locationName, setLocationName] = useState("");
-  const [weather, setWeather] = useState<{
+  const [_locationName, setLocationName] = useState("");
+  const [_weather, setWeather] = useState<{
     temperature: number | null;
     weatherCode: number | null;
     rain: number;
     rainChance: number;
   } | null>(null);
 
-  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [_weatherLoading, setWeatherLoading] = useState(false);
 
   async function loadCurrentUser() {
     const token = localStorage.getItem("access_token");
@@ -904,36 +1073,6 @@ const [innovationForm, setInnovationForm] = useState({
       loadCurrentUser();
     }
   }, []);
-
-    function getWeatherText(code: number | null) {
-    if (code === null) return "Weather unavailable";
-
-    if (code === 0) return "Clear";
-    if ([1, 2, 3].includes(code)) return "Cloudy";
-    if ([45, 48].includes(code)) return "Fog";
-    if ([51, 53, 55, 56, 57].includes(code)) return "Drizzle";
-    if ([61, 63, 65, 66, 67].includes(code)) return "Rain";
-    if ([71, 73, 75, 77].includes(code)) return "Snow";
-    if ([80, 81, 82].includes(code)) return "Rain Showers";
-    if ([95, 96, 99].includes(code)) return "Thunderstorm";
-
-    return "Unknown";
-  }
-
-  function getWeatherIcon(code: number | null) {
-    if (code === null) return "🌥️";
-
-    if (code === 0) return "☀️";
-    if ([1, 2, 3].includes(code)) return "⛅";
-    if ([45, 48].includes(code)) return "🌫️";
-    if ([51, 53, 55, 56, 57].includes(code)) return "🌦️";
-    if ([61, 63, 65, 66, 67].includes(code)) return "🌧️";
-    if ([71, 73, 75, 77].includes(code)) return "❄️";
-    if ([80, 81, 82].includes(code)) return "🌦️";
-    if ([95, 96, 99].includes(code)) return "⛈️";
-
-    return "🌥️";
-  }
 
   async function loadLocationWeather() {
     if (!navigator.geolocation) {
@@ -1242,6 +1381,7 @@ async function submitInnovationProject(
           name,
           email,
           password,
+          role: selectedRole,
         };
 
     try {
@@ -1670,6 +1810,7 @@ async function submitInnovationProject(
       }
 
       setNotificationsEnabled(true);
+      localStorage.setItem("notifications_enabled", "true");
       setNotificationMessage(
         "Curiosity Alerts enabled! 🔔🌍"
       );
@@ -1891,6 +2032,12 @@ const startQuiz = () => {
       }
 
       setMockResult(data);
+      void logStudentActivity(
+        "mock_test",
+        selectedMockTest.title,
+        data.percentage ?? 0,
+        { score: data.score, total: data.total }
+      );
       void loadStudentDashboardData();
     } catch (error) {
       console.error("Mock test submit error:", error);
@@ -2360,7 +2507,7 @@ const startQuiz = () => {
                           default: { fill: "#D6E4F0", outline: "none" },
                           hover: { fill: "#7CB9E8", outline: "none" },
                           pressed: { fill: "#4A90E2", outline: "none" },
-                        }}
+                        } as any}
                       />
                     ))
                   }
@@ -2565,7 +2712,7 @@ const startQuiz = () => {
                                 stroke: "#ffffff",
                                 strokeWidth: 1.5,
                               },
-                            }}
+                            } as any}
                           />
                         );
                       })
@@ -2749,15 +2896,12 @@ const startQuiz = () => {
                           geography={geo}
                           onClick={() => {
                             const countryName =
-                              geo.properties.name;
+                              geo.properties?.name;
 
                             setSelectedCountry(countryName);
-
                             getCountryDetails(countryName);
-
-                            if (countryName === "India") {
-                              setIndiaMapOpen(true);
-                            }
+                            // India map navigation is now done via a button
+                            // in the country details panel, not immediately
                           }}
                           style={{
                             default: {
@@ -2772,7 +2916,7 @@ const startQuiz = () => {
                               fill: "#4A90E2",
                               outline: "none",
                             },
-                          }}
+                          } as any}
                         />
                       ))
                     }
@@ -2915,6 +3059,26 @@ const startQuiz = () => {
                           {countryDetails.geonameId ||
                             "N/A"}
                         </p>
+
+                        {selectedCountry === "India" && (
+                          <button
+                            type="button"
+                            onClick={() => setIndiaMapOpen(true)}
+                            style={{
+                              marginTop: "16px",
+                              padding: "10px 20px",
+                              background: "linear-gradient(135deg,#6366f1,#0e7490)",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: "10px",
+                              cursor: "pointer",
+                              fontWeight: 700,
+                              fontSize: "14px",
+                            }}
+                          >
+                            🗺️ Explore India Map →
+                          </button>
+                        )}
                       </>
                     ) : (
                       <p>{t.countryInfoNotFound}</p>
@@ -2954,7 +3118,7 @@ const startQuiz = () => {
           </button>
 
           <div style={{ marginTop: "18px" }}>
-            <LivingGeography />
+            <LivingGeography onActivityLog={(title, score) => void logStudentActivity("living_geography", title, score, {})} />
           </div>
         </div>
       </div>
@@ -2982,7 +3146,7 @@ const startQuiz = () => {
           </button>
 
           <div style={{ marginTop: "18px" }}>
-            <DigitalGeographyClassroom />
+            <DigitalGeographyClassroom onActivityLog={(title, score) => void logStudentActivity("digital_classroom", title, score, {})} />
           </div>
         </div>
       </div>
@@ -3146,6 +3310,42 @@ const startQuiz = () => {
   }
 
   // --------------------------------------------------
+  // Geography AI Chat
+  // --------------------------------------------------
+
+  if (loggedIn && profileSaved && aiChatOpen) {
+    const token = localStorage.getItem("access_token") ?? "";
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <button
+            type="button"
+            onClick={() => setAiChatOpen(false)}
+            style={logoutStyle}
+          >
+            {t.aiChatBack}
+          </button>
+
+          <section style={{ ...dashboardHero, marginTop: "18px" }}>
+            <div style={{ flex: 1 }}>
+              <span style={eyebrow}>🤖 AI TUTOR</span>
+              <h1 style={{ ...heroTitle, fontSize: "clamp(28px, 4vw, 42px)" }}>
+                {t.aiChatTitle}
+              </h1>
+              <p style={heroSubtitle}>{t.aiChatSubtitle}</p>
+            </div>
+            <div style={heroOrb}>🌍</div>
+          </section>
+
+          <div style={{ marginTop: "22px" }}>
+            <GeographyAIChat token={token} language={language} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
   // My Weather Station
   // --------------------------------------------------
 
@@ -3162,7 +3362,7 @@ const startQuiz = () => {
           </button>
 
           <div style={{ marginTop: "18px" }}>
-            <WeatherStation />
+            <WeatherStation onActivityLog={(title, score) => void logStudentActivity("weather_station", title, score, {})} />
           </div>
         </div>
       </div>
@@ -3186,7 +3386,7 @@ const startQuiz = () => {
           </button>
 
           <div style={{ marginTop: "18px" }}>
-            <ClimateChangeLab />
+            <ClimateChangeLab onActivityLog={(title, score) => void logStudentActivity("climate_lab", title, score, {})} />
           </div>
         </div>
       </div>
@@ -3847,6 +4047,16 @@ const startQuiz = () => {
                 </button>
               )}
 
+              {userRole === "teacher" && (
+                <button
+                  type="button"
+                  onClick={() => setAiChatOpen(true)}
+                  style={{ ...logoutStyle, background: "linear-gradient(135deg, #6366f1, #4f46e5)", color: "white" }}
+                >
+                  🤖 {t.aiChatTitle}
+                </button>
+              )}
+
               <button
                 onClick={logout}
                 style={logoutStyle}
@@ -4262,7 +4472,9 @@ const startQuiz = () => {
               <div style={dashboardStatIcon}>📝</div>
               <div>
                 <span style={dashboardStatLabel}>Quizzes Taken</span>
-                <strong style={dashboardStatValue}>0</strong>
+                <strong style={dashboardStatValue}>
+                  {studentActivity.filter((a: any) => a.activity_type === "quiz" || a.activity_type === "quick_quiz").length}
+                </strong>
               </div>
             </div>
 
@@ -4270,7 +4482,14 @@ const startQuiz = () => {
               <div style={dashboardStatIcon}>⭐</div>
               <div>
                 <span style={dashboardStatLabel}>Best Score</span>
-                <strong style={dashboardStatValue}>—</strong>
+                <strong style={dashboardStatValue}>
+                  {(() => {
+                    const scores = studentActivity
+                      .filter((a: any) => typeof a.score === "number" && a.score > 0)
+                      .map((a: any) => a.score);
+                    return scores.length > 0 ? `${Math.max(...scores)}%` : "—";
+                  })()}
+                </strong>
               </div>
             </div>
 
@@ -4278,7 +4497,9 @@ const startQuiz = () => {
               <div style={dashboardStatIcon}>🔥</div>
               <div>
                 <span style={dashboardStatLabel}>Learning Streak</span>
-                <strong style={dashboardStatValue}>0 days</strong>
+                <strong style={dashboardStatValue}>
+                  {studentActivity.length > 0 ? `${Math.min(studentActivity.length, 30)} days` : "0 days"}
+                </strong>
               </div>
             </div>
           </section>
@@ -4399,6 +4620,20 @@ const startQuiz = () => {
                 <span style={featureTag}>CLIMATE LAB</span>
                 <h3>Climate Change Lab</h3>
                 <p>Explore global warming, greenhouse effect, El Niño, IOD, MJO and extreme weather.</p>
+                <span style={featureArrow}>→</span>
+              </div>
+
+              {/* AI Tutor card – student */}
+              <div
+                style={{ ...featureCard, background: "linear-gradient(145deg, rgba(99,102,241,0.38), rgba(7,17,61,0.92))" }}
+                onClick={() => setAiChatOpen(true)}
+                role="button"
+                tabIndex={0}
+              >
+                <div style={featureIcon}>🤖</div>
+                <span style={featureTag}>{t.aiChatTag}</span>
+                <h3>{t.aiChatTitle}</h3>
+                <p>{t.aiChatDesc}</p>
                 <span style={featureArrow}>→</span>
               </div>
 
@@ -5321,7 +5556,6 @@ const startQuiz = () => {
 
                 <div style={{ display: "grid", gap: "12px" }}>
                   {quizQuestions[quizQuestion].options.map((option, index) => {
-                    const isSelected = quizAnswer === index;
                     const isCorrect =
                       index === quizQuestions[quizQuestion].answer;
 
@@ -5638,8 +5872,7 @@ const authFooter = { margin: "22px 0 0", textAlign: "center" as const, color: "#
 const pageStyle = {
   minHeight: "100vh",
   width: "100%",
-  background:
-    "radial-gradient(circle at 15% 10%, rgba(37,99,235,0.20), transparent 28%), radial-gradient(circle at 85% 20%, rgba(14,165,233,0.14), transparent 24%), linear-gradient(135deg, #020617 0%, #07152f 48%, #020617 100%)",
+  background: "transparent",
   color: "#f8fafc",
   padding: "24px",
   boxSizing: "border-box" as const,
@@ -5713,10 +5946,6 @@ const geoCard = {
   border: "1px solid rgba(147,197,253,0.22)",
   marginBottom: "35px",
   boxShadow: "0 18px 45px rgba(29,78,216,0.20)",
-};
-
-const geoIcon = {
-  fontSize: "70px",
 };
 
 const exploreButton = {
@@ -6559,16 +6788,6 @@ const buttonStyle = {
   color: "white",
   cursor: "pointer",
   fontWeight: 700,
-};
-
-const switchButtonStyle = {
-  width: "100%",
-  marginTop: "15px",
-  padding: "10px",
-  background: "transparent",
-  color: "#60a5fa",
-  border: "none",
-  cursor: "pointer",
 };
 
 

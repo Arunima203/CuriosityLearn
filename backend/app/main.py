@@ -1,9 +1,11 @@
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi import FastAPI
 import requests
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine
-from .models import User, StudentProfile, CuriosityQuestion, CuriosityAnswer
 from .database import Base
 from .routers.auth import router as auth_router
 from .routers.student_profile import router as student_profile_router
@@ -17,6 +19,8 @@ from .services.curiosity_scheduler import (
 from .routers.notifications import router as notifications_router
 from .routers.geography_content import router as geography_content_router
 from .routers.geography_ai_chat import router as geography_ai_chat_router
+from .models import User, StudentProfile, CuriosityQuestion, CuriosityAnswer, KnowledgeItem
+from .routers.knowledge_center import router as knowledge_center_router
 
 # Student Progress
 from .routers.student_progress import (
@@ -57,6 +61,7 @@ app.include_router(student_progress_router)
 app.include_router(teacher_progress_router)
 app.include_router(geography_content_router)
 app.include_router(geography_ai_chat_router)
+app.include_router(knowledge_center_router)
 
 
 # CORS

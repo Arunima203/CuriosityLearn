@@ -185,7 +185,7 @@ const questions: Question[] = [
 const STORAGE_KEY =
   "curiositylearn_climate_lab_progress";
 
-export default function ClimateChangeLab() {
+export default function ClimateChangeLab({ onActivityLog }: { onActivityLog?: (title: string, score: number) => void }) {
   const [selectedTopic, setSelectedTopic] =
     useState(topics[0]);
 
@@ -258,6 +258,7 @@ export default function ClimateChangeLab() {
       setSelectedAnswer(null);
     } else {
       setQuizFinished(true);
+      onActivityLog?.(`Climate Change Lab Quiz`, Math.round((score / questions.length) * 100));
     }
   }
 

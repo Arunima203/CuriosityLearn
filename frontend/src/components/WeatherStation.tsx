@@ -70,7 +70,7 @@ function getWindDirection(degrees?: number) {
   return directions[Math.round(degrees / 45) % 8];
 }
 
-export default function WeatherStation() {
+export default function WeatherStation({ onActivityLog }: { onActivityLog?: (title: string, score: number) => void }) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [location, setLocation] = useState<string>("Getting location...");
   const [loading, setLoading] = useState(true);
@@ -170,6 +170,7 @@ export default function WeatherStation() {
       STORAGE_KEY,
       JSON.stringify(updated)
     );
+    onActivityLog?.("My Weather Station — observation saved", 100);
   }
 
   if (loading) {

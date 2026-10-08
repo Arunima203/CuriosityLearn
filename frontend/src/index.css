@@ -6,9 +6,38 @@
 
 body {
   font-family: Arial, sans-serif;
-  background: #f4f7fb;
   color: #1f2937;
+  overflow-x: hidden;
 }
+
+/* ── Natural Geography Background ───────────────────────────────────────── */
+
+/* Each bg layer fades in/out — 5 images × 8 s each = 40 s cycle */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+}
+
+.bg-layer.active {
+  opacity: 1;
+}
+
+/* Dark overlay on top of all bg layers */
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(1.5px);
+}
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
 
 .app {
   min-height: 100vh;

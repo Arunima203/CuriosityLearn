@@ -108,7 +108,7 @@ const CHALLENGES: Record<LivingTopic, Challenge[]> = {
   ],
 };
 
-export default function LivingGeography() {
+export default function LivingGeography({ onActivityLog }: { onActivityLog?: (title: string, score: number) => void }) {
   const [selectedTopic, setSelectedTopic] = useState<LivingTopic>("flood");
   const [floodRain, setFloodRain] = useState(55);
   const [riverFlow, setRiverFlow] = useState(50);
@@ -270,6 +270,7 @@ export default function LivingGeography() {
                 try {
                   localStorage.setItem("curiositylearn_living_geo_xp", String(next));
                 } catch {}
+                onActivityLog?.(`Living Geography: ${topic.title}`, 100);
                 return next;
               });
             }
