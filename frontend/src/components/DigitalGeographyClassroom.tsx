@@ -16,6 +16,39 @@ type Lesson = {
   topics: string[];
 };
 
+type LessonTopicDetail = {
+  explanation: string;
+  points: string[];
+  example: string;
+};
+
+const LESSON_TOPIC_DETAILS: Record<string, LessonTopicDetail[]> = {
+  latitude: [
+    { explanation: "Equator হলো 0° latitude-এর কাল্পনিক রেখা, যা পৃথিবীকে Northern ও Southern Hemisphere-এ ভাগ করে।", points: ["0° latitude", "পৃথিবীর মাঝ বরাবর বিস্তৃত", "উত্তর ও দক্ষিণ গোলার্ধ আলাদা করে"], example: "উদাহরণ: Ecuador, Kenya ও Indonesia-এর কিছু অংশ Equator-এর কাছাকাছি।" },
+    { explanation: "Prime Meridian হলো 0° longitude-এর reference line। এখান থেকে পূর্ব ও পশ্চিম longitude মাপা হয়।", points: ["0° longitude", "Greenwich, London-এর মধ্য দিয়ে যায়", "East ও West longitude-এর reference"], example: "উদাহরণ: কোনো স্থানের longitude 90°E হলে সেটি Prime Meridian-এর পূর্বে।" },
+    { explanation: "Latitude কোনো স্থান Equator-এর কতটা উত্তরে বা দক্ষিণে আছে তা বোঝায়।", points: ["0° থেকে 90°N/S", "N = Northern Hemisphere", "S = Southern Hemisphere"], example: "উদাহরণ: Kolkata প্রায় 22.6°N latitude-এ অবস্থিত।" },
+    { explanation: "Longitude কোনো স্থান Prime Meridian-এর কতটা পূর্বে বা পশ্চিমে আছে তা বোঝায়।", points: ["0° থেকে 180°E/W", "E = East", "W = West"], example: "উদাহরণ: কোনো শহরের longitude 88°E হলে সেটি Prime Meridian-এর পূর্বে।" },
+  ],
+  weather: [
+    { explanation: "Temperature হলো কোনো স্থানের বায়ু কতটা গরম বা ঠান্ডা তার পরিমাপ।", points: ["সাধারণত °C বা °F-এ মাপা হয়", "দিন ও ঋতু অনুযায়ী বদলায়", "Weather বোঝার গুরুত্বপূর্ণ উপাদান"], example: "উদাহরণ: গ্রীষ্মকালে দিনের temperature সাধারণত বেশি থাকে।" },
+    { explanation: "Rainfall হলো নির্দিষ্ট সময়ে কোনো এলাকায় কত বৃষ্টি হয়েছে তার পরিমাণ।", points: ["Millimetre-এ মাপা হয়", "বৃষ্টির pattern জলবায়ুকে প্রভাবিত করে", "বন্যা ও কৃষির সঙ্গে সম্পর্কিত"], example: "উদাহরণ: বর্ষাকালে বেশি rainfall নদীর জলস্তর বাড়াতে পারে।" },
+    { explanation: "Wind হলো বায়ুর এক স্থান থেকে অন্য স্থানে চলাচল।", points: ["দিক ও গতি থাকে", "চাপের পার্থক্যের কারণে বায়ু চলে", "Weather পরিবর্তনে ভূমিকা রাখে"], example: "উদাহরণ: সমুদ্রের দিক থেকে আসা বাতাস উপকূলীয় আবহাওয়াকে প্রভাবিত করতে পারে।" },
+    { explanation: "Weather হলো স্বল্প সময়ের atmospheric condition, আর climate হলো দীর্ঘ সময়ের সাধারণ pattern।", points: ["Weather দ্রুত বদলাতে পারে", "Climate দীর্ঘ সময়ের pattern", "দুটিই temperature, rainfall ও wind-এর সঙ্গে সম্পর্কিত"], example: "উদাহরণ: আজ বৃষ্টি হওয়া weather; কোনো অঞ্চলে বহু বছর ধরে বর্ষাকালে বেশি বৃষ্টি হওয়া climate pattern।" },
+  ],
+  rivers: [
+    { explanation: "River erosion হলো নদীর প্রবাহে মাটি ও শিলা ক্ষয় হওয়ার প্রক্রিয়া।", points: ["নদীর স্রোত ক্ষয় ঘটায়", "তীর ও নদীর তলদেশ বদলাতে পারে", "Valley ও channel তৈরি হতে পারে"], example: "উদাহরণ: দ্রুত স্রোতের নদীতে bank erosion বেশি হতে পারে।" },
+    { explanation: "Transportation হলো নদীর ক্ষয় করা sediment এক স্থান থেকে অন্য স্থানে বহন করা।", points: ["বালি, কাদা ও ছোট পাথর বহন করে", "প্রবাহের শক্তি বেশি হলে বেশি sediment বহন করতে পারে", "নদীর course বরাবর sediment সরায়"], example: "উদাহরণ: পাহাড়ি নদী উজান থেকে বালি ও পাথর ভাটির দিকে নিয়ে যায়।" },
+    { explanation: "Deposition হলো নদীর বহন করা sediment কোনো স্থানে জমা হওয়ার প্রক্রিয়া।", points: ["প্রবাহের গতি কমলে deposition বাড়ে", "বালি ও পলি জমতে পারে", "Delta ও sandbar তৈরি হতে পারে"], example: "উদাহরণ: নদীর মোহনায় পলি জমে delta তৈরি হতে পারে।" },
+    { explanation: "Floodplain হলো নদীর পাশের অপেক্ষাকৃত সমতল এলাকা, যা বন্যার সময় প্লাবিত হতে পারে।", points: ["নদীর পাশে গড়ে ওঠে", "বন্যার সময় জল ছড়িয়ে পড়তে পারে", "পলি জমে মাটি উর্বর হতে পারে"], example: "উদাহরণ: বড় নদীর আশেপাশের সমতল floodplain কৃষির জন্য গুরুত্বপূর্ণ হতে পারে।" },
+  ],
+  maps: [
+    { explanation: "Map symbols হলো মানচিত্রে বিভিন্ন feature বোঝানোর জন্য ব্যবহৃত চিহ্ন।", points: ["Road, river, city ইত্যাদি দেখাতে পারে", "Legend বা key অর্থ বুঝতে সাহায্য করে", "Map পড়া সহজ করে"], example: "উদাহরণ: নীল রেখা অনেক map-এ নদী বোঝাতে ব্যবহার করা হয়।" },
+    { explanation: "Direction দিয়ে কোনো স্থানের relative অবস্থান বোঝানো হয়। প্রধান direction হলো North, South, East ও West।", points: ["N, S, E, W প্রধান direction", "NE, NW, SE, SW intermediate direction", "Compass direction বুঝতে সাহায্য করে"], example: "উদাহরণ: কোনো শহর অন্য শহরের উত্তরে হলে বলা যায় সেটি north of the city।" },
+    { explanation: "Map scale map-এর দূরত্ব ও বাস্তব দূরত্বের সম্পর্ক দেখায়।", points: ["Representative fraction বা statement scale হতে পারে", "ছোট map-এ বড় এলাকা দেখানো যায়", "বাস্তব দূরত্ব হিসাব করতে সাহায্য করে"], example: "উদাহরণ: 1 cm = 10 km scale হলে map-এ 2 cm বাস্তবে 20 km।" },
+    { explanation: "Map-এ মাপা distance-কে scale ব্যবহার করে বাস্তব-world distance-এ রূপান্তর করা যায়।", points: ["Map distance মাপো", "Scale প্রয়োগ করো", "Real distance বের করো"], example: "উদাহরণ: scale অনুযায়ী 3 cm যদি 30 km হয়, তবে 3 cm map distance = 30 km বাস্তবে।" },
+  ],
+};
+
 const CONTINENTS: Continent[] = [
   {
     id: "asia",
@@ -170,6 +203,7 @@ export default function DigitalGeographyClassroom() {
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [answered, setAnswered] = useState<string | null>(null);
+  const [selectedTopicIndex, setSelectedTopicIndex] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(
@@ -238,44 +272,157 @@ export default function DigitalGeographyClassroom() {
 
   if (selectedLesson && selectedLesson.id !== "earth") {
     const completed = completedLessons.includes(selectedLesson.id);
+    const topicDetails = LESSON_TOPIC_DETAILS[selectedLesson.id] || [];
+    const safeTopicIndex = Math.min(
+      selectedTopicIndex,
+      Math.max(topicDetails.length - 1, 0)
+    );
+    const activeTopic = topicDetails[safeTopicIndex];
 
     return (
-      <div style={shellStyle}>
-        <button
-          type="button"
-          onClick={() => setSelectedLesson(null)}
-          style={backButtonStyle}
-        >
-          ← Back to Classroom
-        </button>
-
-        <div style={heroStyle}>
-          <div style={{ fontSize: "54px" }}>{selectedLesson.icon}</div>
-          <h1 style={{ margin: "8px 0" }}>{selectedLesson.title}</h1>
-          <p style={mutedTextStyle}>{selectedLesson.description}</p>
-
-          <h3 style={{ marginTop: "28px" }}>What you will learn</h3>
-
-          <div style={topicGridStyle}>
-            {selectedLesson.topics.map((topic) => (
-              <div key={topic} style={topicStyle}>
-                📘 {topic}
-              </div>
-            ))}
-          </div>
-
+      <div style={lessonPageStyle}>
+        <div style={lessonTopBarStyle}>
           <button
             type="button"
-            onClick={() => completeLesson(selectedLesson.id)}
-            style={{
-              ...primaryButtonStyle,
-              background: completed ? "#16a34a" : "#38bdf8",
-              color: completed ? "white" : "#082f49",
-            }}
+            onClick={() => setSelectedLesson(null)}
+            style={backButtonStyle}
           >
-            {completed ? "✓ Lesson Completed" : "✓ Mark as Completed"}
+            ← Back to Classroom
           </button>
+          <span style={lessonBreadcrumbStyle}>Digital Geography Classroom / Lesson</span>
         </div>
+
+        <div style={lessonHeroGridStyle}>
+          <div style={lessonHeroContentStyle}>
+            <div style={lessonIconStyle}>{selectedLesson.icon}</div>
+            <div style={lessonEyebrowStyle}>GEOGRAPHY LESSON</div>
+            <h1 style={lessonTitleStyle}>{selectedLesson.title}</h1>
+            <p style={lessonHeroDescriptionStyle}>{selectedLesson.description}</p>
+            <div style={lessonMetaRowStyle}>
+              <span style={lessonMetaPillStyle}>📚 {selectedLesson.topics.length} Topics</span>
+              <span style={lessonMetaPillStyle}>🧠 Interactive Learning</span>
+              <span style={{ ...lessonMetaPillStyle, background: completed ? "rgba(34,197,94,0.18)" : "rgba(56,189,248,0.14)", borderColor: completed ? "rgba(34,197,94,0.35)" : "rgba(56,189,248,0.28)" }}>
+                {completed ? "✓ Completed" : `Topic ${safeTopicIndex + 1} of ${selectedLesson.topics.length}`}
+              </span>
+            </div>
+          </div>
+
+          <div style={lessonVisualCardStyle}>
+            <div style={lessonVisualGlowStyle} />
+            <div style={lessonVisualIconStyle}>{selectedLesson.icon}</div>
+            <div style={lessonVisualCaptionStyle}>
+              <strong>Click a topic to learn</strong>
+              <span>Read the explanation, example and key points.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={lessonLearningGridStyle}>
+          <section style={lessonSectionCardStyle}>
+            <div style={sectionHeaderStyle}>
+              <div>
+                <div style={sectionEyebrowStyle}>LESSON TOPICS</div>
+                <h2 style={sectionTitleStyle}>What you will learn</h2>
+              </div>
+              <span style={goalCountStyle}>{selectedLesson.topics.length} topics</span>
+            </div>
+
+            <div style={lessonTopicGridStyle}>
+              {selectedLesson.topics.map((topic, index) => {
+                const active = index === safeTopicIndex;
+                return (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => setSelectedTopicIndex(index)}
+                    style={{
+                      ...lessonTopicCardStyle,
+                      width: "100%",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      color: "inherit",
+                      background: active ? "rgba(56,189,248,0.14)" : "rgba(255,255,255,0.045)",
+                      borderColor: active ? "rgba(56,189,248,0.45)" : "rgba(148,163,184,0.12)",
+                      boxShadow: active ? "0 10px 28px rgba(14,165,233,0.12)" : "none",
+                    }}
+                  >
+                    <div style={topicNumberStyle}>{String(index + 1).padStart(2, "0")}</div>
+                    <div>
+                      <strong style={topicTitleStyle}>{topic}</strong>
+                      <p style={topicHintStyle}>Click to learn this topic →</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <aside style={lessonActionCardStyle}>
+            <div style={sectionEyebrowStyle}>YOUR PROGRESS</div>
+            <div style={progressCircleStyle}>
+              <span>{completed ? "100%" : `${Math.round(((safeTopicIndex + 1) / selectedLesson.topics.length) * 100)}%`}</span>
+            </div>
+            <h3 style={{ margin: "8px 0 6px", fontSize: "20px" }}>
+              {completed ? "Great job! 🎉" : `Topic ${safeTopicIndex + 1} selected`}
+            </h3>
+            <p style={topicHintStyle}>
+              {completed ? "You have completed this lesson. Keep exploring!" : "Read each topic and mark the lesson complete when you finish."}
+            </p>
+            <button
+              type="button"
+              onClick={() => completeLesson(selectedLesson.id)}
+              style={{
+                ...lessonCompleteButtonStyle,
+                background: completed ? "#16a34a" : "#38bdf8",
+                color: completed ? "white" : "#082f49",
+              }}
+            >
+              {completed ? "✓ Lesson Completed" : "✓ Mark as Completed"}
+            </button>
+          </aside>
+        </div>
+
+        {activeTopic && (
+          <section style={lessonTopicDetailStyle}>
+            <div style={sectionEyebrowStyle}>TOPIC {safeTopicIndex + 1}</div>
+            <h2 style={{ margin: "6px 0 10px", fontSize: "30px" }}>{selectedLesson.topics[safeTopicIndex]}</h2>
+            <p style={topicExplanationStyle}>{activeTopic.explanation}</p>
+
+            <div style={detailGridStyle}>
+              <div style={detailPanelStyle}>
+                <strong>🔑 Key points</strong>
+                <div style={{ display: "grid", gap: "9px", marginTop: "12px" }}>
+                  {activeTopic.points.map((point) => (
+                    <div key={point} style={detailPointStyle}>✓ {point}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={detailPanelStyle}>
+                <strong>💡 Example</strong>
+                <p style={{ margin: "12px 0 0", lineHeight: 1.7, opacity: 0.82 }}>{activeTopic.example}</p>
+              </div>
+            </div>
+
+            <div style={topicNavigationStyle}>
+              <button
+                type="button"
+                disabled={safeTopicIndex === 0}
+                onClick={() => setSelectedTopicIndex((index) => Math.max(0, index - 1))}
+                style={secondaryButtonStyle}
+              >
+                ← Previous Topic
+              </button>
+              <button
+                type="button"
+                disabled={safeTopicIndex === selectedLesson.topics.length - 1}
+                onClick={() => setSelectedTopicIndex((index) => Math.min(selectedLesson.topics.length - 1, index + 1))}
+                style={primaryButtonStyle}
+              >
+                Next Topic →
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     );
   }
@@ -566,7 +713,11 @@ export default function DigitalGeographyClassroom() {
             <button
               key={lesson.id}
               type="button"
-              onClick={() => setSelectedLesson(lesson)}
+              onClick={() => {
+                setSelectedLesson(lesson);
+                setSelectedTopicIndex(0);
+                setMode("learn");
+              }}
               style={lessonCardStyle}
             >
               <div style={{ fontSize: "42px" }}>{lesson.icon}</div>
@@ -589,6 +740,296 @@ export default function DigitalGeographyClassroom() {
     </div>
   );
 }
+
+
+const lessonLearningGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) 300px",
+  gap: "18px",
+  marginTop: "18px",
+};
+
+const lessonTopicDetailStyle: React.CSSProperties = {
+  marginTop: "18px",
+  padding: "26px",
+  borderRadius: "24px",
+  background: "linear-gradient(145deg, rgba(14,30,50,0.98), rgba(15,23,42,0.96))",
+  border: "1px solid rgba(56,189,248,0.20)",
+  boxShadow: "0 18px 50px rgba(0,0,0,0.20)",
+};
+
+const topicExplanationStyle: React.CSSProperties = {
+  margin: 0,
+  maxWidth: "900px",
+  fontSize: "17px",
+  lineHeight: 1.8,
+  opacity: 0.88,
+};
+
+const detailGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "14px",
+  marginTop: "20px",
+};
+
+const detailPanelStyle: React.CSSProperties = {
+  padding: "18px",
+  borderRadius: "17px",
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(148,163,184,0.12)",
+};
+
+const detailPointStyle: React.CSSProperties = {
+  padding: "9px 11px",
+  borderRadius: "11px",
+  background: "rgba(56,189,248,0.08)",
+  fontSize: "13px",
+  lineHeight: 1.5,
+};
+
+const topicNavigationStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "12px",
+  marginTop: "20px",
+};
+
+const lessonPageStyle: React.CSSProperties = {
+  maxWidth: "1120px",
+  margin: "0 auto",
+  padding: "28px 22px 60px",
+  color: "white",
+};
+
+const lessonTopBarStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "14px",
+  marginBottom: "18px",
+};
+
+const lessonBreadcrumbStyle: React.CSSProperties = {
+  fontSize: "13px",
+  opacity: 0.58,
+};
+
+const lessonHeroGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1.35fr) minmax(260px, 0.65fr)",
+  gap: "18px",
+  padding: "30px",
+  borderRadius: "28px",
+  background: "linear-gradient(135deg, #0f2740, #111827 62%, #172554)",
+  border: "1px solid rgba(96,165,250,0.22)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.28)",
+};
+
+const lessonHeroContentStyle: React.CSSProperties = {
+  minWidth: 0,
+};
+
+const lessonIconStyle: React.CSSProperties = {
+  width: "64px",
+  height: "64px",
+  display: "grid",
+  placeItems: "center",
+  borderRadius: "20px",
+  background: "rgba(56,189,248,0.14)",
+  border: "1px solid rgba(56,189,248,0.25)",
+  fontSize: "34px",
+  marginBottom: "18px",
+};
+
+const lessonEyebrowStyle: React.CSSProperties = {
+  fontSize: "12px",
+  fontWeight: 800,
+  letterSpacing: "1.8px",
+  opacity: 0.62,
+};
+
+const lessonTitleStyle: React.CSSProperties = {
+  margin: "7px 0 10px",
+  fontSize: "clamp(32px, 5vw, 50px)",
+  lineHeight: 1.05,
+};
+
+const lessonHeroDescriptionStyle: React.CSSProperties = {
+  margin: 0,
+  maxWidth: "680px",
+  lineHeight: 1.75,
+  fontSize: "16px",
+  opacity: 0.78,
+};
+
+const lessonMetaRowStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "9px",
+  marginTop: "22px",
+};
+
+const lessonMetaPillStyle: React.CSSProperties = {
+  padding: "8px 11px",
+  borderRadius: "999px",
+  background: "rgba(255,255,255,0.07)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  fontSize: "12px",
+  fontWeight: 700,
+};
+
+const lessonVisualCardStyle: React.CSSProperties = {
+  position: "relative",
+  minHeight: "260px",
+  overflow: "hidden",
+  borderRadius: "24px",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  textAlign: "center",
+  background: "linear-gradient(145deg, rgba(14,165,233,0.16), rgba(30,41,59,0.62))",
+  border: "1px solid rgba(148,163,184,0.16)",
+};
+
+const lessonVisualGlowStyle: React.CSSProperties = {
+  position: "absolute",
+  width: "180px",
+  height: "180px",
+  borderRadius: "50%",
+  background: "rgba(56,189,248,0.14)",
+  filter: "blur(20px)",
+};
+
+const lessonVisualIconStyle: React.CSSProperties = {
+  position: "relative",
+  fontSize: "88px",
+  marginBottom: "18px",
+};
+
+const lessonVisualCaptionStyle: React.CSSProperties = {
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px",
+  fontSize: "13px",
+  opacity: 0.86,
+};
+
+const lessonContentGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) 300px",
+  gap: "18px",
+  marginTop: "18px",
+};
+
+const lessonSectionCardStyle: React.CSSProperties = {
+  padding: "24px",
+  borderRadius: "24px",
+  background: "rgba(15,23,42,0.86)",
+  border: "1px solid rgba(148,163,184,0.16)",
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "12px",
+  marginBottom: "18px",
+};
+
+const sectionEyebrowStyle: React.CSSProperties = {
+  fontSize: "11px",
+  letterSpacing: "1.5px",
+  fontWeight: 800,
+  opacity: 0.55,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  margin: "5px 0 0",
+  fontSize: "25px",
+};
+
+const goalCountStyle: React.CSSProperties = {
+  padding: "7px 10px",
+  borderRadius: "999px",
+  background: "rgba(56,189,248,0.10)",
+  color: "#7dd3fc",
+  fontSize: "12px",
+  fontWeight: 800,
+};
+
+const lessonTopicGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: "12px",
+};
+
+const lessonTopicCardStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "13px",
+  padding: "17px",
+  borderRadius: "17px",
+  background: "rgba(255,255,255,0.045)",
+  border: "1px solid rgba(148,163,184,0.12)",
+};
+
+const topicNumberStyle: React.CSSProperties = {
+  flex: "0 0 auto",
+  width: "34px",
+  height: "34px",
+  display: "grid",
+  placeItems: "center",
+  borderRadius: "11px",
+  background: "rgba(56,189,248,0.12)",
+  color: "#7dd3fc",
+  fontSize: "11px",
+  fontWeight: 900,
+};
+
+const topicTitleStyle: React.CSSProperties = {
+  display: "block",
+  lineHeight: 1.35,
+};
+
+const topicHintStyle: React.CSSProperties = {
+  margin: "5px 0 0",
+  fontSize: "12px",
+  lineHeight: 1.5,
+  opacity: 0.55,
+};
+
+const lessonActionCardStyle: React.CSSProperties = {
+  padding: "24px",
+  borderRadius: "24px",
+  background: "linear-gradient(160deg, rgba(30,41,59,0.98), rgba(15,23,42,0.94))",
+  border: "1px solid rgba(148,163,184,0.16)",
+  alignSelf: "start",
+};
+
+const progressCircleStyle: React.CSSProperties = {
+  width: "112px",
+  height: "112px",
+  borderRadius: "50%",
+  display: "grid",
+  placeItems: "center",
+  margin: "20px auto",
+  background: "radial-gradient(circle, #0f172a 55%, transparent 57%), conic-gradient(#38bdf8 0deg, #38bdf8 0deg, rgba(148,163,184,0.16) 0deg)",
+  border: "8px solid rgba(56,189,248,0.10)",
+  fontSize: "21px",
+  fontWeight: 900,
+};
+
+const lessonCompleteButtonStyle: React.CSSProperties = {
+  width: "100%",
+  border: "none",
+  borderRadius: "13px",
+  padding: "13px 16px",
+  marginTop: "16px",
+  cursor: "pointer",
+  fontWeight: 900,
+};
 
 const shellStyle: React.CSSProperties = {
   maxWidth: "1100px",

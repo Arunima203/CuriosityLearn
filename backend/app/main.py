@@ -15,6 +15,8 @@ from .services.curiosity_scheduler import (
     stop_curiosity_scheduler,
 )
 from .routers.notifications import router as notifications_router
+from .routers.geography_content import router as geography_content_router
+from .routers.geography_ai_chat import router as geography_ai_chat_router
 
 # Student Progress
 from .routers.student_progress import (
@@ -53,6 +55,8 @@ app.include_router(notifications_router)
 
 app.include_router(student_progress_router)
 app.include_router(teacher_progress_router)
+app.include_router(geography_content_router)
+app.include_router(geography_ai_chat_router)
 
 
 # CORS

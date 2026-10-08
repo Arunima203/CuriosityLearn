@@ -242,6 +242,12 @@ type LearningContent = {
   imageUrl: string;
 };
 
+type GeographyTopic = {
+  id: number;
+  title: string;
+  image_url: string | null;
+};
+
 const DEFAULT_LEARNING_CONTENT: LearningContent[] = [
   {
     id: "geo-monsoon",
@@ -618,9 +624,7 @@ const DIGITAL_CITIZENSHIP_TOPICS: DigitalCitizenshipTopic[] = [
 // --------------------------------------------------
 type GeographyInnovationSection =
   | "classroom"
-  | "living"
-  | "ai"
-  | "gis";
+  | "living";
 
 const GEOGRAPHY_INNOVATION_SECTIONS: Record<
   GeographyInnovationSection,
@@ -658,34 +662,6 @@ const GEOGRAPHY_INNOVATION_SECTIONS: Record<
       "ভূমিকম্প",
       "জলবায়ু পরিবর্তন",
       "স্থানীয় পরিবেশ",
-    ],
-  },
-  ai: {
-    icon: "🤖",
-    tag: "AI + GEOGRAPHY",
-    title: "AI + Geography",
-    description:
-      "AI-কে Geography learning partner হিসেবে ব্যবহার করে প্রশ্ন, Why-based thinking এবং personal improvement তৈরি করো।",
-    points: [
-      "AI দিয়ে Geography প্রশ্ন করা",
-      "“Why?” ভিত্তিক প্রশ্ন",
-      "AI-assisted learning",
-      "ব্যক্তিগত ভুল বিশ্লেষণ",
-      "Learning recommendation",
-    ],
-  },
-  gis: {
-    icon: "🗺️",
-    tag: "MAP & GIS",
-    title: "Map & GIS Corner",
-    description:
-      "Location, map ও spatial thinking-এর মাধ্যমে Geography-কে আরও বাস্তবভাবে বোঝো।",
-    points: [
-      "Latitude ও longitude",
-      "Map scale",
-      "Interactive maps",
-      "Satellite imagery",
-      "Location-based Geography",
     ],
   },
 };
@@ -771,6 +747,7 @@ function App() {
   const [selectedTeacherStudent, setSelectedTeacherStudent] = useState<any>(null);
   const [teacherProgressLoading, setTeacherProgressLoading] = useState(false);
   const [teacherStudentLoading, setTeacherStudentLoading] = useState(false);
+  const [teacherProgressOpen, setTeacherProgressOpen] = useState(false);
   const [teacherTestForm, setTeacherTestForm] = useState({
     title: "",
     description: "",
@@ -800,6 +777,12 @@ function App() {
     videoUrl: "",
     imageUrl: "",
   });
+
+  // Teacher Geography Topic + Picture
+  const [geographyTopics, setGeographyTopics] = useState<GeographyTopic[]>([]);
+  const [geographyTopicName, setGeographyTopicName] = useState("");
+  const [geographyTopicImage, setGeographyTopicImage] = useState<File | null>(null);
+  const [geographyTopicLoading, setGeographyTopicLoading] = useState(false);
 
   const [challengePoints, setChallengePoints] = useState(0);
 
@@ -1767,6 +1750,7 @@ async function submitInnovationProject(
 
   useEffect(() => {
     if (loggedIn && profileSaved) {
+      loadGeographyTopics();
       loadTodayCuriosity();
       loadCuriosityHistory();
       if (userRole === "student") {
@@ -2114,6 +2098,114 @@ const startQuiz = () => {
     setMessage("");
   }
 
+  async function loadGeographyTopics() {
+    try {
+      const response = await fetch(`${API_URL}/geography-content/`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setGeographyTopics(data);
+      }
+    } catch (error) {
+      console.error("Geography topics loading error:", error);
+    }
+  }
+
+  async function addGeographyTopic(e: FormEvent) {
+    e.preventDefault();
+
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      alert("Teacher login required.");
+      return;
+    }
+
+    if (!geographyTopicName.trim()) {
+      alert("Please enter a topic name.");
+      return;
+    }
+
+    if (!geographyTopicImage) {
+      alert("Please choose a topic picture.");
+      return;
+    }
+
+    setGeographyTopicLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("chapter", "Geography Topics");
+      formData.append("title", geographyTopicName.trim());
+      formData.append("subject", "Geography");
+      formData.append("image", geographyTopicImage);
+
+      const response = await fetch(`${API_URL}/geography-content/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "Geography topic add failed.");
+        return;
+      }
+
+      setGeographyTopics((items) => [data, ...items]);
+      setGeographyTopicName("");
+      setGeographyTopicImage(null);
+
+      const fileInput = document.getElementById(
+        "geography-topic-image-input"
+      ) as HTMLInputElement | null;
+      if (fileInput) fileInput.value = "";
+
+      alert("Geography topic added successfully! 🎉");
+    } catch (error) {
+      console.error("Geography topic add error:", error);
+      alert("Geography topic add failed.");
+    } finally {
+      setGeographyTopicLoading(false);
+    }
+  }
+
+  async function deleteGeographyTopic(id: number) {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    if (!window.confirm("Delete this Geography topic?")) return;
+
+    try {
+      const response = await fetch(`${API_URL}/geography-content/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "Delete failed.");
+        return;
+      }
+
+      setGeographyTopics((items) => items.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("Geography topic delete error:", error);
+      alert("Delete failed.");
+    }
+  }
+
+  function getGeographyImageUrl(imageUrl: string | null) {
+    if (!imageUrl) return "";
+    return imageUrl.startsWith("http") ? imageUrl : `${API_URL}${imageUrl}`;
+  }
+
   function openLearning() {
     setSelectedLesson(null);
     setLearningOpen(true);
@@ -2121,6 +2213,7 @@ const startQuiz = () => {
   }
 
   function openAdmin() {
+    if (userRole !== "teacher") return;
     setAdminOpen(true);
     setLearningOpen(false);
     setSelectedLesson(null);
@@ -3405,7 +3498,7 @@ const startQuiz = () => {
   // Admin Content Manager
   // --------------------------------------------------
 
-  if (loggedIn && profileSaved && adminOpen) {
+  if (loggedIn && profileSaved && adminOpen && userRole === "teacher") {
     return (
       <div style={pageStyle}>
         <div style={dashboardStyle}>
@@ -3471,6 +3564,77 @@ const startQuiz = () => {
             </form>
           </div>
 
+          <div style={{ ...adminFormCard, marginTop: "24px" }}>
+            <h2>🌍 Add Geography Topic Picture</h2>
+            <p style={{ opacity: 0.72, marginTop: "-4px" }}>
+              Teacher শুধু topic-এর নাম ও picture যোগ করতে পারবেন।
+            </p>
+
+            <form onSubmit={addGeographyTopic}>
+              <input
+                style={inputStyle}
+                placeholder="Topic name (e.g. River Erosion)"
+                value={geographyTopicName}
+                onChange={(e) => setGeographyTopicName(e.target.value)}
+                required
+              />
+
+              <input
+                id="geography-topic-image-input"
+                style={inputStyle}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) =>
+                  setGeographyTopicImage(e.target.files?.[0] || null)
+                }
+                required
+              />
+
+              <button
+                type="submit"
+                style={buttonStyle}
+                disabled={geographyTopicLoading}
+              >
+                {geographyTopicLoading ? "Adding..." : "Add Topic + Picture"}
+              </button>
+            </form>
+          </div>
+
+          <h2 style={{ marginTop: "30px" }}>🌍 Geography Topics</h2>
+          <div style={learningGrid}>
+            {geographyTopics.map((topic) => (
+              <div key={topic.id} style={learningCard}>
+                {topic.image_url && (
+                  <img
+                    src={getGeographyImageUrl(topic.image_url)}
+                    alt={topic.title}
+                    style={{
+                      width: "100%",
+                      height: "190px",
+                      objectFit: "cover",
+                      borderRadius: "16px",
+                      marginBottom: "14px",
+                    }}
+                  />
+                )}
+                <h3>{topic.title}</h3>
+                <button
+                  type="button"
+                  style={{ ...logoutStyle, background: "#7f1d1d", color: "white" }}
+                  onClick={() => deleteGeographyTopic(topic.id)}
+                >
+                  Delete Topic
+                </button>
+              </div>
+            ))}
+
+            {geographyTopics.length === 0 && (
+              <div style={emptyLatest}>
+                এখনও কোনো Geography topic যোগ করা হয়নি।
+              </div>
+            )}
+          </div>
+
           <h2 style={{ marginTop: "30px" }}>📚 Existing Lessons</h2>
           <div style={learningGrid}>
             {learningContent.map((lesson) => (
@@ -3498,91 +3662,37 @@ const startQuiz = () => {
   // Dashboard
   // --------------------------------------------------
 
-  if (loggedIn && profileSaved) {
+  if (loggedIn && profileSaved && teacherProgressOpen && userRole === "teacher") {
     return (
       <div style={pageStyle}>
         <div style={dashboardStyle}>
-          <div style={topBar}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "18px",
+            flexWrap: "wrap",
+          }}>
             <div>
-              <h1 style={{ margin: 0 }}>
-                CuriosityLearn 🚀
-              </h1>
-
-              <p
-                style={{
-                  margin: "6px 0 0",
-                  opacity: 0.7,
-                }}
-              >
-                Explore Geography. Learn by curiosity.
+              <div style={{ fontSize: "13px", opacity: 0.7 }}>👩‍🏫 Teacher Panel</div>
+              <h1 style={{ margin: "5px 0 0" }}>📊 Student Progress</h1>
+              <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
+                Check the learning progress of all students from one place.
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={openAdmin}
-                style={{ ...logoutStyle, background: "#334155", color: "white" }}
-              >
-                ⚙️ Content Admin
-              </button>
-
-              {userRole === "teacher" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMessage("");
-                    setTeacherMockOpen(true);
-                  }}
-                  style={{ ...logoutStyle, background: "#2563eb", color: "white" }}
-                >
-                  📝 Mock Test Manager
-                </button>
-              )}
-
-              <button
-                onClick={logout}
-                style={logoutStyle}
-              >
-                {t.logout}
-              </button>
-            </div>
+            <button
+              type="button"
+              style={{ ...logoutStyle, background: "#2563eb", color: "white" }}
+              onClick={() => {
+                setSelectedTeacherStudent(null);
+                setTeacherProgressOpen(false);
+              }}
+            >
+              ← Back to Dashboard
+            </button>
           </div>
-
-          {userRole === "student" && (
-            <section style={{
-              marginTop: "18px",
-              padding: "20px",
-              borderRadius: "20px",
-              background: "linear-gradient(135deg, rgba(30,64,175,0.34), rgba(15,118,110,0.22))",
-              border: "1px solid rgba(125,211,252,0.18)",
-              boxShadow: "0 18px 45px rgba(2,6,23,0.25)",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                  <div style={{ width: "58px", height: "58px", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.12)", fontSize: "25px", fontWeight: 800 }}>
-                    {String(currentUser?.name || name || "S").charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "13px", opacity: 0.7 }}>{t.studentProfile}</div>
-                    <h2 style={{ margin: "3px 0 0" }}>{currentUser?.name || name || "Student"}</h2>
-                    <div style={{ opacity: 0.75, fontSize: "14px" }}>{currentUser?.email || email || ""}</div>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(110px, 1fr))", gap: "10px", width: "min(100%, 430px)" }}>
-                  <div style={miniStatStyle}>📚 <strong>{studentDashboardProfile?.class_name || "—"}</strong><span>{t.classLabel}</span></div>
-                  <div style={miniStatStyle}>🎓 <strong>{studentDashboardProfile?.board || "—"}</strong><span>{t.boardLabel}</span></div>
-                  <div style={miniStatStyle}>🗣️ <strong>{studentDashboardProfile?.medium || "—"}</strong><span>{t.mediumLabel}</span></div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: "10px" }}>
-                <div style={progressStatCard}>🌍 <strong>{studentActivity.length}</strong><span>{t.activityCount}</span></div>
-                <div style={progressStatCard}>✨ <strong>{studentActivity.filter((item: any) => item.activity_type === "curiosity").length}</strong><span>{t.curiosityAnswered}</span></div>
-                <div style={progressStatCard}>📝 <strong>{studentActivity.filter((item: any) => item.activity_type === "mock_test").length}</strong><span>{t.mockAttempts}</span></div>
-              </div>
-            </section>
-          )}
 
           {userRole === "teacher" && (
             <section style={{
@@ -3672,6 +3782,113 @@ const startQuiz = () => {
                 )}
               </div>
             </div>
+          )}
+
+        </div>
+      </div>
+    );
+  }
+
+  if (loggedIn && profileSaved) {
+    return (
+      <div style={pageStyle}>
+        <div style={dashboardStyle}>
+          <div style={topBar}>
+            <div>
+              <h1 style={{ margin: 0 }}>
+                CuriosityLearn 🚀
+              </h1>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  opacity: 0.7,
+                }}
+              >
+                Explore Geography. Learn by curiosity.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {userRole === "teacher" && (
+                <button
+                  type="button"
+                  onClick={openAdmin}
+                  style={{ ...logoutStyle, background: "#334155", color: "white" }}
+                >
+                  ⚙️ Content Admin
+                </button>
+              )}
+
+              {userRole === "teacher" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTeacherStudent(null);
+                    setTeacherProgressOpen(true);
+                    loadTeacherStudents();
+                  }}
+                  style={{ ...logoutStyle, background: "#0f766e", color: "white" }}
+                >
+                  📊 Student Progress
+                </button>
+              )}
+
+              {userRole === "teacher" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMessage("");
+                    setTeacherMockOpen(true);
+                  }}
+                  style={{ ...logoutStyle, background: "#2563eb", color: "white" }}
+                >
+                  📝 Mock Test Manager
+                </button>
+              )}
+
+              <button
+                onClick={logout}
+                style={logoutStyle}
+              >
+                {t.logout}
+              </button>
+            </div>
+          </div>
+
+          {userRole === "student" && (
+            <section style={{
+              marginTop: "18px",
+              padding: "20px",
+              borderRadius: "20px",
+              background: "linear-gradient(135deg, rgba(30,64,175,0.34), rgba(15,118,110,0.22))",
+              border: "1px solid rgba(125,211,252,0.18)",
+              boxShadow: "0 18px 45px rgba(2,6,23,0.25)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                  <div style={{ width: "58px", height: "58px", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.12)", fontSize: "25px", fontWeight: 800 }}>
+                    {String(currentUser?.name || name || "S").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "13px", opacity: 0.7 }}>{t.studentProfile}</div>
+                    <h2 style={{ margin: "3px 0 0" }}>{currentUser?.name || name || "Student"}</h2>
+                    <div style={{ opacity: 0.75, fontSize: "14px" }}>{currentUser?.email || email || ""}</div>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(110px, 1fr))", gap: "10px", width: "min(100%, 430px)" }}>
+                  <div style={miniStatStyle}>📚 <strong>{studentDashboardProfile?.class_name || "—"}</strong><span>{t.classLabel}</span></div>
+                  <div style={miniStatStyle}>🎓 <strong>{studentDashboardProfile?.board || "—"}</strong><span>{t.boardLabel}</span></div>
+                  <div style={miniStatStyle}>🗣️ <strong>{studentDashboardProfile?.medium || "—"}</strong><span>{t.mediumLabel}</span></div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: "10px" }}>
+                <div style={progressStatCard}>🌍 <strong>{studentActivity.length}</strong><span>{t.activityCount}</span></div>
+                <div style={progressStatCard}>✨ <strong>{studentActivity.filter((item: any) => item.activity_type === "curiosity").length}</strong><span>{t.curiosityAnswered}</span></div>
+                <div style={progressStatCard}>📝 <strong>{studentActivity.filter((item: any) => item.activity_type === "mock_test").length}</strong><span>{t.mockAttempts}</span></div>
+              </div>
+            </section>
           )}
 
           {teacherMockOpen && userRole === "teacher" && (
@@ -4248,6 +4465,47 @@ const startQuiz = () => {
               </button>
             </aside>
           </section>
+          {/* ---------------------------------------- */}
+          {/* Teacher-added Geography Topics */}
+          {/* Student view only */}
+          {/* ---------------------------------------- */}
+
+          {userRole === "student" && (
+            <section style={{ marginTop: "30px" }}>
+              <h2>🌍 Geography Topics</h2>
+              <p style={{ marginTop: "-8px", opacity: 0.72 }}>
+                Teacher-এর যোগ করা Geography topics দেখো।
+              </p>
+
+              <div style={learningGrid}>
+                {geographyTopics.map((topic) => (
+                  <div key={topic.id} style={learningCard}>
+                    {topic.image_url && (
+                      <img
+                        src={getGeographyImageUrl(topic.image_url)}
+                        alt={topic.title}
+                        style={{
+                          width: "100%",
+                          height: "210px",
+                          objectFit: "cover",
+                          borderRadius: "16px",
+                          marginBottom: "14px",
+                        }}
+                      />
+                    )}
+                    <h3 style={{ marginBottom: 0 }}>{topic.title}</h3>
+                  </div>
+                ))}
+
+                {geographyTopics.length === 0 && (
+                  <div style={emptyLatest}>
+                    এখনও কোনো Geography topic যোগ করা হয়নি।
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* ---------------------------------------- */}
           {/* Student Innovation Zone */}
           {/* ---------------------------------------- */}

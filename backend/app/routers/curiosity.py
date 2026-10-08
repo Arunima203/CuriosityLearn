@@ -10,6 +10,7 @@ from ..models import (
     CuriosityQuestion,
     CuriosityAnswer,
     CuriosityLocation,
+    StudentActivity,
 )
 from ..services.jwt import get_current_user_id, security
 
@@ -215,6 +216,52 @@ WORLD_QUESTIONS = [
 
 
 # ==================================================
+# Location matching helpers
+# ==================================================
+
+# Keep the existing question banks, but make location matching tolerant
+# of common spellings/names returned by geocoding services.
+CITY_ALIASES = {
+    "kolkata": "kolkata",
+    "calcutta": "kolkata",
+}
+
+REGION_ALIASES = {
+    "west bengal": "west bengal",
+    "west bengal state": "west bengal",
+    "wb": "west bengal",
+}
+
+COUNTRY_ALIASES = {
+    "india": "india",
+    "republic of india": "india",
+}
+
+
+def _location_key(value: str | None) -> str:
+    """Normalize a location value for reliable matching."""
+    if not value:
+        return ""
+
+    return " ".join(value.strip().lower().split())
+
+
+def _city_key(value: str | None) -> str:
+    key = _location_key(value)
+    return CITY_ALIASES.get(key, key)
+
+
+def _region_key(value: str | None) -> str:
+    key = _location_key(value)
+    return REGION_ALIASES.get(key, key)
+
+
+def _country_key(value: str | None) -> str:
+    key = _location_key(value)
+    return COUNTRY_ALIASES.get(key, key)
+
+
+# ==================================================
 # Helper: choose today's question
 # ==================================================
 
@@ -223,70 +270,56 @@ def choose_daily_question(
     location: CuriosityLocation | None,
 ):
     """
+    Choose a question from the most specific available location level.
+
+    Priority:
+        city -> region -> country -> global
+
+    The current question banks are intentionally preserved: Kolkata has a
+    city bank, West Bengal has a regional bank, India has a country bank,
+    and WORLD_QUESTIONS is the global fallback.
+
     Returns:
         (question_blueprint, personalization_level)
     """
 
     day_index = today.toordinal()
 
-    # ----------------------------------------------
-    # City level
-    # ----------------------------------------------
+    city_key = _city_key(location.city if location else None)
+    region_key = _region_key(location.region if location else None)
+    country_key = _country_key(location.country if location else None)
 
-    if (
-        location
-        and location.city
-        and location.city.strip().lower() == "kolkata"
-    ):
+    # ----------------------------------------------
+    # 1. City level
+    # ----------------------------------------------
+    # Kolkata and Calcutta are treated as the same city.
+    if city_key == "kolkata":
         index = day_index % len(KOLKATA_QUESTIONS)
-
-        return (
-            KOLKATA_QUESTIONS[index],
-            "city",
-        )
+        return KOLKATA_QUESTIONS[index], "city"
 
     # ----------------------------------------------
-    # Region level
+    # 2. Region level
     # ----------------------------------------------
-
-    if (
-        location
-        and location.region
-        and location.region.strip().lower() == "west bengal"
-    ):
+    # Any city inside West Bengal gets the West Bengal bank when
+    # there is no dedicated city bank for that city.
+    if region_key == "west bengal":
         index = day_index % len(WEST_BENGAL_QUESTIONS)
-
-        return (
-            WEST_BENGAL_QUESTIONS[index],
-            "region",
-        )
+        return WEST_BENGAL_QUESTIONS[index], "region"
 
     # ----------------------------------------------
-    # Country level
+    # 3. Country level
     # ----------------------------------------------
-
-    if (
-        location
-        and location.country
-        and location.country.strip().lower() == "india"
-    ):
+    # Any Indian location without a city/region-specific bank gets
+    # an India Geography question.
+    if country_key == "india":
         index = day_index % len(INDIA_QUESTIONS)
-
-        return (
-            INDIA_QUESTIONS[index],
-            "country",
-        )
+        return INDIA_QUESTIONS[index], "country"
 
     # ----------------------------------------------
-    # Global fallback
+    # 4. Global fallback
     # ----------------------------------------------
-
     index = day_index % len(WORLD_QUESTIONS)
-
-    return (
-        WORLD_QUESTIONS[index],
-        "global",
-    )
+    return WORLD_QUESTIONS[index], "global"
 
 
 # ==================================================
@@ -610,6 +643,18 @@ def answer_curiosity(
     )
 
     db.add(answer)
+    db.add(
+        StudentActivity(
+            user_id=user_id,
+            activity_type="curiosity",
+            title="Completed daily Geography Curiosity",
+            score=xp,
+            details=(
+                f"Question #{data.question_id}; "
+                f"correct={is_correct}; xp={xp}"
+            ),
+        )
+    )
     db.commit()
     db.refresh(answer)
 

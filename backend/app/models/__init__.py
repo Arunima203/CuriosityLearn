@@ -4,3 +4,4 @@ from .curiosity import CuriosityQuestion, CuriosityAnswer
 from .curiosity_location import CuriosityLocation
 from .notification import NotificationSubscription
 from .activity import StudentActivity
+from .geography_content import GeographyContent
