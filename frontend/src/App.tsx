@@ -17,7 +17,7 @@ import GeographyAIChat from "./components/GeographyAIChat";
 
 
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "http://10.0.2.2:8000";
 const translations = {
   en: {
     exploreWorld: "Explore the World",
@@ -5656,6 +5656,28 @@ const startQuiz = () => {
           maxWidth: "100%",
           }}
         >
+        <div
+  style={{
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: "12px",
+  }}
+>
+  <button
+    type="button"
+    onClick={logout}
+    style={{
+      ...logoutStyle,
+      background: "#dc2626",
+      color: "white",
+      fontWeight: 700,
+      padding: "9px 16px",
+      borderRadius: "8px",
+    }}
+  >
+    🔓 Logout
+  </button>
+</div>
           <h1>{t.setupProfile}</h1>
 
           <p>{t.profileDescription}</p>

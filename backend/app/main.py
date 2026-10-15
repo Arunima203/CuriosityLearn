@@ -37,6 +37,15 @@ app = FastAPI(
     description="Interactive multi-class learning platform",
     version="1.0.0",
 )
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
@@ -64,16 +73,11 @@ app.include_router(geography_ai_chat_router)
 app.include_router(knowledge_center_router)
 
 
-# CORS
+# CORS — allow all origins (Capacitor/Android/web)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

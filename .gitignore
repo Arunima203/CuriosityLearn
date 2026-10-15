@@ -18,3 +18,29 @@ frontend/dist/
 # OS
 Thumbs.db
 .DS_Store
+
+# Root Node dependencies
+/node_modules/
+
+# Build output
+/frontend/dist/
+/android/.gradle/
+/android/app/build/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Android Studio local files
+/android/.idea/
+
+# Android build output
+/android/.gradle/
+/android/app/build/
+/android/build/
+
+# Local environment files
+.env
+.env.*
+!.env.example

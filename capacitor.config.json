@@ -1,0 +1,14 @@
+{
+  "appId": "com.curiositylearn.app",
+  "appName": "SRK classes",
+  "webDir": "frontend/dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

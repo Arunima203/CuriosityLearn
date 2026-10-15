@@ -106,9 +106,40 @@ export default function WeatherStation({ onActivityLog }: { onActivityLog?: (tit
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
 
-        setLocation(
-          `${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
-        );
+        setLocation("Loading location name...");
+
+try {
+  const locationResponse = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+  );
+
+  if (locationResponse.ok) {
+    const locationData = await locationResponse.json();
+    const address = locationData.address;
+
+    const placeName =
+      address.city ||
+      address.town ||
+      address.village ||
+      address.suburb ||
+      address.county;
+
+    const stateName = address.state;
+    const countryName = address.country;
+
+    setLocation(
+      [placeName, stateName, countryName]
+        .filter(Boolean)
+        .filter((value, index, array) => array.indexOf(value) === index)
+        .join(", ") ||
+      `${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
+    );
+  } else {
+    setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
+  }
+} catch {
+  setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
+}
 
         try {
           const url =
