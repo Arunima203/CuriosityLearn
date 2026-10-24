@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI
 import requests
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine
@@ -34,6 +35,55 @@ from .routers.student_progress import (
 
 Base.metadata.create_all(bind=engine)
 
+# ── Safe migrations (add missing columns without dropping data) ───────────
+def run_safe_migrations():
+    migrations = [
+        # Add is_approved to users if missing
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN NOT NULL DEFAULT TRUE;",
+        # Add image_data to geography_contents if missing
+        "ALTER TABLE geography_contents ADD COLUMN IF NOT EXISTS image_data TEXT;",
+        # Create learning_contents table if missing
+        """
+        CREATE TABLE IF NOT EXISTS learning_contents (
+            id SERIAL PRIMARY KEY,
+            teacher_id INTEGER NOT NULL REFERENCES users(id),
+            subject VARCHAR(100) NOT NULL DEFAULT 'Geography',
+            chapter VARCHAR(150) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            video_url VARCHAR(500),
+            image_url VARCHAR(500),
+            notes TEXT,
+            explanation TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        """,
+        # Create chapter_quiz_questions table if missing
+        """
+        CREATE TABLE IF NOT EXISTS chapter_quiz_questions (
+            id SERIAL PRIMARY KEY,
+            teacher_id INTEGER NOT NULL REFERENCES users(id),
+            chapter VARCHAR(150) NOT NULL,
+            question TEXT NOT NULL,
+            option_a VARCHAR(500) NOT NULL,
+            option_b VARCHAR(500) NOT NULL,
+            option_c VARCHAR(500) NOT NULL,
+            option_d VARCHAR(500) NOT NULL,
+            answer INTEGER NOT NULL DEFAULT 0,
+            explanation TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        """,
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+run_safe_migrations()
 
 app = FastAPI(
     title="CuriosityLearn API",
