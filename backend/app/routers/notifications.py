@@ -40,7 +40,7 @@ def get_vapid_public_key():
         )
 
     return {
-        "public_key": public_key,
+        "public_key": public_key.strip(),
     }
 
 

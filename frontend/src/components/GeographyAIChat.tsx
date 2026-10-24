@@ -79,7 +79,18 @@ function renderMarkdown(text: string): string {
   );
 }
 
-const API_URL = "http://10.0.2.2:8000";
+const API_URL = (() => {
+  // In Capacitor native app, always use production
+  if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.()) {
+    return "https://curiositylearn.onrender.com";
+  }
+  // In web dev, use localhost
+  if (typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return "http://127.0.0.1:8000";
+  }
+  return "https://curiositylearn.onrender.com";
+})();
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

@@ -17,7 +17,54 @@ import GeographyAIChat from "./components/GeographyAIChat";
 
 
 
-const API_URL = "http://10.0.2.2:8000";
+const API_URL = (() => {
+  const envUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  const isCapacitor =
+    typeof window !== "undefined" &&
+    Boolean((window as any).Capacitor?.isNativePlatform?.());
+  if (isCapacitor) {
+    return envUrl || "https://curiositylearn.onrender.com";
+  }
+  const isLocal =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  if (isLocal) {
+    return envUrl && !envUrl.includes("onrender.com")
+      ? envUrl
+      : "http://127.0.0.1:8000";
+  }
+  return envUrl || "https://curiositylearn.onrender.com";
+})();
+
+// Convert any YouTube URL to embed URL
+function getYouTubeEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  try {
+    if (url.includes("youtube.com/embed/")) return url;
+    const short = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (short) return `https://www.youtube.com/embed/${short[1]}`;
+    const watch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+    if (watch) return `https://www.youtube.com/embed/${watch[1]}`;
+    const shorts = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
+  } catch {}
+  return null;
+}
+
+// Fetch with 30s timeout — Render free tier can be slow on cold start
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 30000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return response;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
 const translations = {
   en: {
     exploreWorld: "Explore the World",
@@ -252,6 +299,8 @@ type LearningContent = {
   description: string;
   videoUrl: string;
   imageUrl: string;
+  notes: string;
+  explanation: string;
 };
 
 type GeographyTopic = {
@@ -269,6 +318,8 @@ const DEFAULT_LEARNING_CONTENT: LearningContent[] = [
     description: "Explore the Indian monsoon through explanation, animation and challenges.",
     videoUrl: "",
     imageUrl: "",
+    notes: "• Indian monsoon is caused by differential heating of land and sea.\n• Southwest monsoon brings rain to most of India (June–September).\n• The monsoon reverses direction in winter (Northeast monsoon).\n• Key factors: Coriolis effect, ITCZ movement, Western Ghats orographic rainfall.",
+    explanation: "The monsoon changes direction due to the seasonal shift of the Inter-Tropical Convergence Zone (ITCZ). In summer, land heats up faster than the sea, creating a low-pressure area over India. Moist winds rush in from the Indian Ocean. In winter, the land cools faster, reversing the pressure gradient and sending dry winds outward.",
   },
   {
     id: "geo-cyclone",
@@ -278,6 +329,8 @@ const DEFAULT_LEARNING_CONTENT: LearningContent[] = [
     description: "See how warm ocean water, rising air and pressure create a cyclone.",
     videoUrl: "",
     imageUrl: "",
+    notes: "• Cyclones form over warm ocean water (above 26°C).\n• Warm moist air rises rapidly, creating a low-pressure centre.\n• Surrounding air spirals inward due to the Coriolis effect.\n• The 'eye' of the cyclone is calm and clear.\n• Bay of Bengal cyclones affect eastern India (Odisha, Andhra Pradesh, West Bengal).",
+    explanation: "A cyclone begins when warm ocean water heats the air above it. The warm air rises quickly, leaving a low-pressure zone at the surface. Cooler surrounding air rushes in and spirals because of Earth's rotation (Coriolis effect). This creates the rotating storm system. The centre — called the eye — is surprisingly calm.",
   },
   {
     id: "geo-river",
@@ -287,6 +340,8 @@ const DEFAULT_LEARNING_CONTENT: LearningContent[] = [
     description: "Understand erosion, transportation and deposition with visuals.",
     videoUrl: "",
     imageUrl: "",
+    notes: "• Erosion: river cuts into rock and soil (upper course — V-shaped valleys).\n• Transportation: river carries sediment as load.\n• Deposition: sediment dropped at the mouth (delta formation).\n• Famous Indian deltas: Ganga-Brahmaputra delta (Sundarbans), Krishna, Godavari.\n• Meanders form in the middle course where gradients are gentle.",
+    explanation: "Rivers shape the landscape through three processes — erosion, transportation and deposition. In the mountains (upper course), fast-moving water cuts deep V-shaped valleys. In the plains (middle course), the river slows, forms meanders and starts depositing. At the coast (lower course), sediment is dropped, forming fertile deltas.",
   },
 ];
 
@@ -859,11 +914,37 @@ function App() {
 
   const [challengeTarget, setChallengeTarget] = useState("");
   const [quizOpen, setQuizOpen] = useState(false);
+  const [quizShowResult, setQuizShowResult] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [_quizLoading, setQuizLoading] = useState(false);
+
+  // --------------------------------------------------
+  // Chapter-wise Take Quiz System
+  // --------------------------------------------------
+  const [chapterModalOpen, setChapterModalOpen] = useState(false);
+  const [chapterList, setChapterList] = useState<Array<{ chapter: string; question_count: number }>>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [selectedChapterName, setSelectedChapterName] = useState<string>("All");
+
+  // Teacher Chapter Quiz Manager
+  const [teacherQuizManagerOpen, setTeacherQuizManagerOpen] = useState(false);
+  const [teacherQuizSaving, setTeacherQuizSaving] = useState(false);
+  const [teacherQuizQuestions, setTeacherQuizQuestions] = useState<any[]>([]);
+  const [teacherQuizFilterChapter, setTeacherQuizFilterChapter] = useState<string>("All");
+  const [teacherQuizForm, setTeacherQuizForm] = useState({
+    chapter: "__new__",
+    customChapter: "",
+    question: "",
+    option_a: "",
+    option_b: "",
+    option_c: "",
+    option_d: "",
+    correct_answer: "0",
+    explanation: "",
+  });
 
   // --------------------------------------------------
   // Daily Geography Curiosity
@@ -911,6 +992,43 @@ function App() {
   const [studentDashboardProfile, setStudentDashboardProfile] = useState<any>(null);
   const [studentActivity, setStudentActivity] = useState<any[]>([]);
   const [teacherStudents, setTeacherStudents] = useState<any[]>([]);
+
+  // Student Points & Streak Stats
+  const [studentStats, setStudentStats] = useState<{
+    points: number;
+    day_streak: number;
+    curiosity_xp: number;
+    activity_points: number;
+    mock_points: number;
+    curiosity_answered: number;
+    mock_attempts: number;
+    activity_count: number;
+  }>({
+    points: 0,
+    day_streak: 0,
+    curiosity_xp: 0,
+    activity_points: 0,
+    mock_points: 0,
+    curiosity_answered: 0,
+    mock_attempts: 0,
+    activity_count: 0,
+  });
+
+  // Admin Teacher Verification & Approval
+  const [teacherApprovalsOpen, setTeacherApprovalsOpen] = useState(false);
+  const [adminTeachers, setAdminTeachers] = useState<{
+    pending: any[];
+    approved: any[];
+    pending_count: number;
+    approved_count: number;
+  }>({
+    pending: [],
+    approved: [],
+    pending_count: 0,
+    approved_count: 0,
+  });
+  const [adminTeachersLoading, setAdminTeachersLoading] = useState(false);
+  const [adminActionMessage, setAdminActionMessage] = useState("");
   const [selectedTeacherStudent, setSelectedTeacherStudent] = useState<any>(null);
   const [teacherProgressLoading, setTeacherProgressLoading] = useState(false);
   const [teacherStudentLoading, setTeacherStudentLoading] = useState(false);
@@ -943,6 +1061,8 @@ function App() {
     description: "",
     videoUrl: "",
     imageUrl: "",
+    notes: "",
+    explanation: "",
   });
 
   // Teacher Geography Topic + Picture
@@ -1385,13 +1505,13 @@ async function submitInnovationProject(
         };
 
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetchWithTimeout(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-      });
+      }, 45000);
 
       const data = await response.json();
 
@@ -1402,19 +1522,27 @@ async function submitInnovationProject(
 
       if (isLogin) {
         localStorage.setItem("access_token", data.access_token);
-
-        const role = await loadCurrentUser();
+        // Store role from login response directly — don't wait for /auth/me
+        const role = data.user?.role || "student";
+        setUserRole(role);
+        setCurrentUser(data.user || null);
+        localStorage.setItem("user_role", role);
         if (role === "teacher") {
           setProfileSaved(true);
         }
-
         setLoggedIn(true);
+        // Load full user profile in background (non-blocking)
+        void loadCurrentUser();
       } else {
         setMessage("Registration successful! 🎉");
         setIsLogin(true);
       }
-    } catch {
-      setMessage(t.backendError);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        setMessage("Server response timeout। Render free tier-এ প্রথমবার 30-60 সেকেন্ড লাগে। আবার try করুন।");
+      } else {
+        setMessage(t.backendError);
+      }
     }
   }
 
@@ -1495,11 +1623,14 @@ async function submitInnovationProject(
     if (!token || userRole !== "student") return;
 
     try {
-      const [profileResponse, activityResponse] = await Promise.all([
+      const [profileResponse, activityResponse, statsResponse] = await Promise.all([
         fetch(`${API_URL}/student-profile`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_URL}/student/activity`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_URL}/student/stats`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -1511,8 +1642,104 @@ async function submitInnovationProject(
         const data = await activityResponse.json();
         setStudentActivity(Array.isArray(data) ? data : []);
       }
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStudentStats(statsData);
+      }
     } catch (error) {
       console.error("Student dashboard data error:", error);
+    }
+  }
+
+  // --------------------------------------------------
+  // Admin Teacher Verification & Approval Functions
+  // --------------------------------------------------
+
+  async function loadAdminTeachers() {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    setAdminTeachersLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/admin/teachers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAdminTeachers(data);
+      }
+    } catch (error) {
+      console.error("Error loading teachers for admin:", error);
+    } finally {
+      setAdminTeachersLoading(false);
+    }
+  }
+
+  async function approveTeacher(teacherId: number, teacherName: string) {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/admin/teachers/${teacherId}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAdminActionMessage(data.message || `Teacher ${teacherName} approved! ✅`);
+        await loadAdminTeachers();
+      } else {
+        alert(data.detail || "Approval failed");
+      }
+    } catch (error) {
+      console.error("Approve teacher error:", error);
+      alert("Failed to approve teacher");
+    }
+  }
+
+  async function rejectTeacher(teacherId: number, teacherName: string) {
+    if (!window.confirm(`Are you sure you want to reject and remove registration for '${teacherName}'?`)) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/admin/teachers/${teacherId}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAdminActionMessage(data.message || `Teacher registration for ${teacherName} rejected.`);
+        await loadAdminTeachers();
+      } else {
+        alert(data.detail || "Rejection failed");
+      }
+    } catch (error) {
+      console.error("Reject teacher error:", error);
+      alert("Failed to reject teacher");
+    }
+  }
+
+  async function revokeTeacher(teacherId: number, teacherName: string) {
+    if (!window.confirm(`Are you sure you want to revoke approval for '${teacherName}'? They will no longer be able to access teacher features.`)) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/admin/teachers/${teacherId}/revoke`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAdminActionMessage(data.message || `Approval revoked for ${teacherName}.`);
+        await loadAdminTeachers();
+      } else {
+        alert(data.detail || "Revoke failed");
+      }
+    } catch (error) {
+      console.error("Revoke teacher error:", error);
+      alert("Failed to revoke teacher approval");
     }
   }
 
@@ -1622,6 +1849,24 @@ async function submitInnovationProject(
     }
   }
 
+  async function checkUserLocationStatus() {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const response = await fetch(`${API_URL}/curiosity/location`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.location_enabled) {
+          setLocationEnabled(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Location check error", e);
+    }
+  }
+
   async function enableCuriosityLocation() {
     if (!navigator.geolocation) {
       setLocationMessage("Location is not supported by this browser.");
@@ -1655,9 +1900,14 @@ async function submitInnovationProject(
           }
 
           setLocationEnabled(true);
+          const placeName = [data.city, data.region].filter(Boolean).join(", ");
           setLocationMessage(
-            "Location enabled! Your Curiosity will now be personalized 🌍"
+            placeName
+              ? `Location enabled (${placeName})! Your curiosity is personalized 🌍`
+              : "Location enabled! Your Curiosity will now be personalized 🌍"
           );
+          // Immediately reload today's curiosity question for this location
+          loadTodayCuriosity();
         } catch (error) {
           console.error("Location save error:", error);
           setLocationMessage("Could not connect to the backend.");
@@ -1695,20 +1945,6 @@ async function submitInnovationProject(
       return;
     }
 
-    if (!("serviceWorker" in navigator)) {
-      setNotificationMessage(
-        "Service Worker is not supported by this browser."
-      );
-      return;
-    }
-
-    if (!("PushManager" in window)) {
-      setNotificationMessage(
-        "Push notifications are not supported by this browser."
-      );
-      return;
-    }
-
     setNotificationsLoading(true);
     setNotificationMessage("");
 
@@ -1717,113 +1953,101 @@ async function submitInnovationProject(
 
       if (permission !== "granted") {
         setNotificationMessage(
-          "Notification permission was not allowed."
+          "Notification permission was denied. Please allow notifications in site settings (ব্রাউজার সেটিংসে নোটিফিকেশন এলাউ করুন)."
         );
         return;
       }
 
-      const registration = await navigator.serviceWorker.register(
-        "/sw.js"
-      );
+      let pushSubscribed = false;
 
-      const keyResponse = await fetch(
-        `${API_URL}/notifications/vapid-public-key`
-      );
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        try {
+          const registration = await navigator.serviceWorker.register("/sw.js");
+          await navigator.serviceWorker.ready;
 
-      const keyData = await keyResponse.json();
+          const keyResponse = await fetch(`${API_URL}/notifications/vapid-public-key`);
+          if (keyResponse.ok) {
+            const keyData = await keyResponse.json();
+            const cleanKey = (keyData.public_key || "").trim().replace(/^["']|["']$/g, "");
 
-      if (!keyResponse.ok || !keyData.public_key) {
-        throw new Error("VAPID public key could not be loaded.");
-      }
+            if (cleanKey) {
+              function urlBase64ToUint8Array(base64String: string) {
+                const clean = base64String.trim().replace(/^["']|["']$/g, "");
+                const padding = "=".repeat((4 - (clean.length % 4)) % 4);
+                const base64 = (clean + padding).replace(/-/g, "+").replace(/_/g, "/");
+                const rawData = window.atob(base64);
+                return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+              }
 
-      function urlBase64ToUint8Array(base64String: string) {
-        const padding = "=".repeat(
-          (4 - (base64String.length % 4)) % 4
-        );
+              let subscription = await registration.pushManager.getSubscription();
+              if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(cleanKey),
+                });
+              }
 
-        const base64 = (
-          base64String +
-          padding
-        )
-          .replace(/-/g, "+")
-          .replace(/_/g, "/");
-
-        const rawData = window.atob(base64);
-
-        return Uint8Array.from(
-          [...rawData].map((char) => char.charCodeAt(0))
-        );
-      }
-
-      let subscription =
-        await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription =
-          await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey:
-              urlBase64ToUint8Array(
-                keyData.public_key
-              ),
-          });
-      }
-
-      const subscriptionJson =
-        subscription.toJSON();
-
-      if (
-        !subscriptionJson.endpoint ||
-        !subscriptionJson.keys?.p256dh ||
-        !subscriptionJson.keys?.auth
-      ) {
-        throw new Error(
-          "Push subscription data is incomplete."
-        );
-      }
-
-      const saveResponse = await fetch(
-        `${API_URL}/notifications/subscribe`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            endpoint: subscriptionJson.endpoint,
-            keys: {
-              p256dh: subscriptionJson.keys.p256dh,
-              auth: subscriptionJson.keys.auth,
-            },
-          }),
+              const subscriptionJson = subscription.toJSON();
+              if (subscriptionJson.endpoint && subscriptionJson.keys?.p256dh && subscriptionJson.keys?.auth) {
+                await fetch(`${API_URL}/notifications/subscribe`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    endpoint: subscriptionJson.endpoint,
+                    keys: {
+                      p256dh: subscriptionJson.keys.p256dh,
+                      auth: subscriptionJson.keys.auth,
+                    },
+                  }),
+                });
+                pushSubscribed = true;
+              }
+            }
+          }
+        } catch (swErr) {
+          console.warn("Service worker / push subscription note:", swErr);
         }
-      );
-
-      const saveData = await saveResponse.json();
-
-      if (!saveResponse.ok) {
-        throw new Error(
-          saveData.detail ||
-          "Could not save push subscription."
-        );
       }
 
       setNotificationsEnabled(true);
       localStorage.setItem("notifications_enabled", "true");
       setNotificationMessage(
-        "Curiosity Alerts enabled! 🔔🌍"
-      );
-    } catch (error) {
-      console.error(
-        "Notification setup error:",
-        error
+        pushSubscribed
+          ? "Curiosity Alerts enabled! 🔔 Daily mystery questions will notify you."
+          : "Curiosity Alerts enabled! 🔔 Daily geography notifications active."
       );
 
+      // Trigger immediate confirmation notification
+      try {
+        if ("serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg && reg.showNotification) {
+            reg.showNotification("🌍 Curiosity Alerts Enabled!", {
+              body: "You'll now receive daily Geography Mystery alerts! Stay curious.",
+              icon: "/favicon.svg",
+            });
+          } else {
+            new Notification("🌍 Curiosity Alerts Enabled!", {
+              body: "You'll now receive daily Geography Mystery alerts! Stay curious.",
+              icon: "/favicon.svg",
+            });
+          }
+        } else {
+          new Notification("🌍 Curiosity Alerts Enabled!", {
+            body: "You'll now receive daily Geography Mystery alerts! Stay curious.",
+            icon: "/favicon.svg",
+          });
+        }
+      } catch (notifErr) {
+        console.warn("Notification display note:", notifErr);
+      }
+    } catch (error) {
+      console.error("Notification setup error:", error);
       setNotificationMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not enable notifications."
+        error instanceof Error ? error.message : "Could not enable notifications."
       );
     } finally {
       setNotificationsLoading(false);
@@ -1881,6 +2105,7 @@ async function submitInnovationProject(
 
       setCuriosityResult(data);
       await loadCuriosityHistory();
+      void loadStudentDashboardData();
     } catch (error) {
       console.error("Curiosity answer error:", error);
       setMessage(t.backendError);
@@ -1892,38 +2117,240 @@ async function submitInnovationProject(
   useEffect(() => {
     if (loggedIn && profileSaved) {
       loadGeographyTopics();
+      checkUserLocationStatus();
       loadTodayCuriosity();
       loadCuriosityHistory();
       if (userRole === "student") {
         loadStudentDashboardData();
-      } else if (userRole === "teacher") {
+      } else if (userRole === "teacher" || userRole === "admin") {
         loadTeacherStudents();
+        loadAdminTeachers();
       }
+      // Load lessons from backend for everyone
+      loadLearningContentFromBackend();
     }
   }, [loggedIn, profileSaved, userRole]);
 
-const startQuiz = () => {
-  console.log("START QUIZ CLICKED");
+  // --------------------------------------------------
+  // Chapter-wise Quiz Functions
+  // --------------------------------------------------
 
-  setQuizLoading(true);
-  setQuizQuestion(0);
-  setQuizScore(0);
-  setQuizAnswer(null);
-
-  const generatedQuestions = generateQuizQuestions([], 10);
-
-  console.log("Generated questions:", generatedQuestions);
-
-  if (generatedQuestions.length === 0) {
-    alert("No quiz questions available!");
-    setQuizLoading(false);
-    return;
+  async function loadLearningContentFromBackend() {
+    try {
+      const res = await fetch(`${API_URL}/learning-content/`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Map backend fields to frontend LearningContent type
+          const mapped: LearningContent[] = data.map((item: any) => ({
+            id: String(item.id),
+            subject: item.subject || "Geography",
+            chapter: item.chapter || "",
+            title: item.title || "",
+            description: item.description || "",
+            videoUrl: item.video_url || "",
+            imageUrl: item.image_url || "",
+            notes: item.notes || "",
+            explanation: item.explanation || "",
+          }));
+          setLearningContent(mapped);
+        }
+        // If backend is empty, keep localStorage defaults
+      }
+    } catch {
+      // If backend fails, keep localStorage content
+    }
+  }
+  async function loadQuizChapters() {
+    setChaptersLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/chapter-quiz/chapters`);
+      if (response.ok) {
+        const data = await response.json();
+        const chapters = data.chapters || [];
+        setChapterList(chapters);
+        // Sync form to first existing chapter if available
+        if (chapters.length > 0) {
+          setTeacherQuizForm(f => f.chapter === "__new__" ? { ...f, chapter: chapters[0].chapter } : f);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load chapters:", err);
+    } finally {
+      setChaptersLoading(false);
+    }
   }
 
-  setQuizQuestions(generatedQuestions);
-  setQuizOpen(true);
-  setQuizLoading(false);
-};
+  function openTakeQuizModal() {
+    setChapterModalOpen(true);
+    loadQuizChapters();
+  }
+
+  async function startChapterQuiz(chapterName: string = "All") {
+    setQuizLoading(true);
+    setSelectedChapterName(chapterName);
+    setQuizQuestion(0);
+    setQuizScore(0);
+    setQuizAnswer(null);
+
+    try {
+      const url =
+        chapterName && chapterName !== "All"
+          ? `${API_URL}/chapter-quiz/questions?chapter=${encodeURIComponent(chapterName)}&limit=10`
+          : `${API_URL}/chapter-quiz/questions?limit=10`;
+
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const formatted: QuizQuestion[] = data.map((q: any) => ({
+            question: q.question,
+            options: q.options,
+            answer: q.answer,
+            explanation: q.explanation,
+          }));
+          setQuizQuestions(formatted);
+          setChapterModalOpen(false);
+          setQuizOpen(true);
+          return;
+        }
+      }
+      const fallback = generateQuizQuestions([], 10);
+      setQuizQuestions(fallback);
+      setChapterModalOpen(false);
+      setQuizOpen(true);
+    } catch (err) {
+      console.error("Chapter quiz error:", err);
+      const fallback = generateQuizQuestions([], 10);
+      setQuizQuestions(fallback);
+      setChapterModalOpen(false);
+      setQuizOpen(true);
+    } finally {
+      setQuizLoading(false);
+    }
+  }
+
+  // Quiz launched via openTakeQuizModal
+
+  async function loadTeacherQuizQuestions(ch: string = "All") {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const url =
+        ch && ch !== "All"
+          ? `${API_URL}/chapter-quiz/teacher/questions?chapter=${encodeURIComponent(ch)}`
+          : `${API_URL}/chapter-quiz/teacher/questions`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTeacherQuizQuestions(data);
+      }
+    } catch (err) {
+      console.error("Failed to load teacher quiz questions:", err);
+    }
+  }
+
+  async function addTeacherQuizQuestion(e: FormEvent) {
+    e.preventDefault();
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setMessage("Please login as teacher.");
+      return;
+    }
+
+    const finalChapter =
+      teacherQuizForm.chapter === "__new__"
+        ? teacherQuizForm.customChapter.trim()
+        : teacherQuizForm.chapter.trim();
+
+    if (!finalChapter) {
+      setMessage("Please enter or select a chapter name.");
+      return;
+    }
+
+    if (!teacherQuizForm.question.trim()) {
+      setMessage("Please enter the question text.");
+      return;
+    }
+
+    if (
+      !teacherQuizForm.option_a.trim() ||
+      !teacherQuizForm.option_b.trim() ||
+      !teacherQuizForm.option_c.trim() ||
+      !teacherQuizForm.option_d.trim()
+    ) {
+      setMessage("Please provide all 4 options.");
+      return;
+    }
+
+    setTeacherQuizSaving(true);
+    setMessage("");
+
+    try {
+      const res = await fetch(`${API_URL}/chapter-quiz/teacher/question`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          chapter: finalChapter,
+          question: teacherQuizForm.question.trim(),
+          option_a: teacherQuizForm.option_a.trim(),
+          option_b: teacherQuizForm.option_b.trim(),
+          option_c: teacherQuizForm.option_c.trim(),
+          option_d: teacherQuizForm.option_d.trim(),
+          correct_answer: Number(teacherQuizForm.correct_answer),
+          explanation: teacherQuizForm.explanation.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.detail || "Failed to add question.");
+        return;
+      }
+
+      setMessage(`Question added to chapter "${finalChapter}"! ✅`);
+      setTeacherQuizForm((prev) => ({
+        ...prev,
+        question: "",
+        option_a: "",
+        option_b: "",
+        option_c: "",
+        option_d: "",
+        correct_answer: "0",
+        explanation: "",
+      }));
+      loadTeacherQuizQuestions(teacherQuizFilterChapter);
+      loadQuizChapters();
+    } catch (err) {
+      console.error("Save question error:", err);
+      setMessage("Backend connection error.");
+    } finally {
+      setTeacherQuizSaving(false);
+    }
+  }
+
+  async function deleteTeacherQuizQuestion(id: number) {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/chapter-quiz/teacher/question/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setTeacherQuizQuestions((prev) => prev.filter((q) => q.id !== id));
+        loadQuizChapters();
+      }
+    } catch (err) {
+      console.error("Delete question error:", err);
+    }
+  }
 
   // --------------------------------------------------
   // Weekly Mock Test Functions
@@ -1997,6 +2424,17 @@ const startQuiz = () => {
 
   async function submitMockTest() {
     if (!selectedMockTest) return;
+
+    // Warn if any question unanswered
+    const totalQ = selectedMockTest.questions.length;
+    const answeredQ = Object.keys(mockAnswers).length;
+    if (answeredQ < totalQ) {
+      const unanswered = totalQ - answeredQ;
+      const ok = window.confirm(
+        `${unanswered}টি প্রশ্নের উত্তর দেননি। এগুলো ভুল হিসেবে গণনা হবে। তবুও submit করবেন?`
+      );
+      if (!ok) return;
+    }
 
     setMockSubmitting(true);
     setMessage("");
@@ -2262,21 +2700,9 @@ const startQuiz = () => {
     e.preventDefault();
 
     const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      alert("Teacher login required.");
-      return;
-    }
-
-    if (!geographyTopicName.trim()) {
-      alert("Please enter a topic name.");
-      return;
-    }
-
-    if (!geographyTopicImage) {
-      alert("Please choose a topic picture.");
-      return;
-    }
+    if (!token) { alert("Teacher login required."); return; }
+    if (!geographyTopicName.trim()) { alert("Please enter a topic name."); return; }
+    if (!geographyTopicImage) { alert("Please choose a topic picture."); return; }
 
     setGeographyTopicLoading(true);
 
@@ -2287,13 +2713,11 @@ const startQuiz = () => {
       formData.append("subject", "Geography");
       formData.append("image", geographyTopicImage);
 
-      const response = await fetch(`${API_URL}/geography-content/`, {
+      const response = await fetchWithTimeout(`${API_URL}/geography-content/`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
-      });
+      }, 60000);
 
       const data = await response.json();
 
@@ -2306,15 +2730,13 @@ const startQuiz = () => {
       setGeographyTopicName("");
       setGeographyTopicImage(null);
 
-      const fileInput = document.getElementById(
-        "geography-topic-image-input"
-      ) as HTMLInputElement | null;
+      const fileInput = document.getElementById("geography-topic-image-input") as HTMLInputElement | null;
       if (fileInput) fileInput.value = "";
 
-      alert("Geography topic added successfully! 🎉");
+      alert("Geography topic added! 🎉");
     } catch (error) {
       console.error("Geography topic add error:", error);
-      alert("Geography topic add failed.");
+      alert("Geography topic add failed. Please try again.");
     } finally {
       setGeographyTopicLoading(false);
     }
@@ -2350,7 +2772,12 @@ const startQuiz = () => {
 
   function getGeographyImageUrl(imageUrl: string | null) {
     if (!imageUrl) return "";
-    return imageUrl.startsWith("http") ? imageUrl : `${API_URL}${imageUrl}`;
+    // data: URI — use directly
+    if (imageUrl.startsWith("data:")) return imageUrl;
+    // absolute URL
+    if (imageUrl.startsWith("http")) return imageUrl;
+    // relative path — prepend API base
+    return `${API_URL}${imageUrl}`;
   }
 
   function openLearning() {
@@ -2366,7 +2793,7 @@ const startQuiz = () => {
     setSelectedLesson(null);
   }
 
-  function saveLearningContent(e: FormEvent) {
+  async function saveLearningContent(e: FormEvent) {
     e.preventDefault();
 
     if (!contentForm.title.trim() || !contentForm.chapter.trim()) {
@@ -2374,36 +2801,65 @@ const startQuiz = () => {
       return;
     }
 
-    const newItem: LearningContent = {
-      id: `${Date.now()}`,
-      subject: contentForm.subject.trim() || "Geography",
-      chapter: contentForm.chapter.trim(),
-      title: contentForm.title.trim(),
-      description: contentForm.description.trim() || "New lesson added by admin.",
-      videoUrl: contentForm.videoUrl.trim(),
-      imageUrl: contentForm.imageUrl.trim(),
-    };
+    const token = localStorage.getItem("access_token");
+    if (!token) { alert("Teacher login required."); return; }
 
-    const updated = [...learningContent, newItem];
-    setLearningContent(updated);
-    localStorage.setItem("curiosity_learning_content", JSON.stringify(updated));
+    try {
+      const res = await fetchWithTimeout(`${API_URL}/learning-content/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          subject: contentForm.subject.trim() || "Geography",
+          chapter: contentForm.chapter.trim(),
+          title: contentForm.title.trim(),
+          description: contentForm.description.trim() || null,
+          video_url: contentForm.videoUrl.trim() || null,
+          image_url: contentForm.imageUrl.trim() || null,
+          notes: contentForm.notes.trim() || null,
+          explanation: contentForm.explanation.trim() || null,
+        }),
+      }, 30000);
 
-    setContentForm({
-      subject: "Geography",
-      chapter: "",
-      title: "",
-      description: "",
-      videoUrl: "",
-      imageUrl: "",
-    });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || "Lesson save failed."); return; }
 
-    alert("Lesson added successfully! 🎉");
+      // Map backend response to frontend type
+      const newItem: LearningContent = {
+        id: String(data.id),
+        subject: data.subject,
+        chapter: data.chapter,
+        title: data.title,
+        description: data.description || "",
+        videoUrl: data.video_url || "",
+        imageUrl: data.image_url || "",
+        notes: data.notes || "",
+        explanation: data.explanation || "",
+      };
+
+      setLearningContent(prev => [newItem, ...prev]);
+      setContentForm({ subject: "Geography", chapter: "", title: "", description: "", videoUrl: "", imageUrl: "", notes: "", explanation: "" });
+      alert("Lesson added! 🎉 Students এখন এটা দেখতে পাবে।");
+    } catch {
+      alert("Lesson save failed. Please try again.");
+    }
   }
 
-  function deleteLearningContent(id: string) {
-    const updated = learningContent.filter((item) => item.id !== id);
-    setLearningContent(updated);
-    localStorage.setItem("curiosity_learning_content", JSON.stringify(updated));
+  async function deleteLearningContent(id: string) {
+    const token = localStorage.getItem("access_token");
+
+    // Try backend delete first
+    if (token && !isNaN(Number(id))) {
+      try {
+        await fetch(`${API_URL}/learning-content/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {}
+    }
+    // Also remove from local state
+    setLearningContent(prev => prev.filter(item => item.id !== id));
+    localStorage.setItem("curiosity_learning_content",
+      JSON.stringify(learningContent.filter(item => item.id !== id)));
   }
 
   function logout() {
@@ -2430,6 +2886,23 @@ const startQuiz = () => {
     setUserRole("student");
     setMockAnswers({});
     setMockResult(null);
+    setStudentStats({
+      points: 0,
+      day_streak: 0,
+      curiosity_xp: 0,
+      activity_points: 0,
+      mock_points: 0,
+      curiosity_answered: 0,
+      mock_attempts: 0,
+      activity_count: 0,
+    });
+    setAdminTeachers({
+      pending: [],
+      approved: [],
+      pending_count: 0,
+      approved_count: 0,
+    });
+    setTeacherApprovalsOpen(false);
   }
 
   // --------------------------------------------------
@@ -3022,30 +3495,24 @@ const startQuiz = () => {
 
                         <p>
                           🌐{" "}
-                          <strong>
-                            {t.countryCode}:
-                          </strong>{" "}
-                          {countryDetails.isoAlpha3 ||
-                            "N/A"}
+                          <strong>ISO Alpha-3:</strong>{" "}
+                          {countryDetails.isoAlpha3 || "N/A"}
                         </p>
 
                         <p>
                           🧭{" "}
-                          <strong>
-                            {t.region}:
-                          </strong>{" "}
-                          {countryDetails.continentName ||
-                            "N/A"}
+                          <strong>{t.region}:</strong>{" "}
+                          {countryDetails.continentName || "N/A"}
                         </p>
 
                         <p>
                           🕐{" "}
-                          <strong>
-                            {t.timezone}:
-                          </strong>{" "}
-                          {language === "bn"
-                            ? "GeoNames timezone data"
-                            : "GeoNames timezone data"}
+                          <strong>{t.timezone}:</strong>{" "}
+                          {countryDetails.timeZones?.[0]?.timeZoneId
+                            || countryDetails.timezone
+                            || countryDetails.gmtOffset !== undefined
+                              ? `GMT${countryDetails.gmtOffset >= 0 ? "+" : ""}${countryDetails.gmtOffset}`
+                              : "N/A"}
                         </p>
 
                         <p
@@ -3296,11 +3763,9 @@ const startQuiz = () => {
                 border: "1px solid rgba(125,211,252,0.16)",
               }}
             >
-              <strong>🚀 Next step</strong>
+              <strong>🎓 এখন explore করো</strong>
               <p style={{ marginBottom: 0, opacity: 0.8 }}>
-                এই section-এর পরের ধাপে আমরা interactive lesson, simulation,
-                map/GIS activity এবং AI-based Geography practice একে একে যোগ
-                করব।
+                উপরের Digital Classroom, Living Geography এবং AI Tutor কার্ডগুলোতে click করে শেখা শুরু করো।
               </p>
             </div>
           </section>
@@ -3651,41 +4116,93 @@ const startQuiz = () => {
 
           <div style={lessonSection}>
             <h2>🎥 Concept Video</h2>
-            {selectedLesson.videoUrl ? (
-              <video
-                controls
-                src={selectedLesson.videoUrl}
-                style={{ width: "100%", maxHeight: "500px", borderRadius: "16px", background: "#020617" }}
-              />
-            ) : (
-              <div style={largeMediaPlaceholder}>
-                <div style={{ fontSize: "56px" }}>🎬</div>
-                <h3>Video will be added by Admin</h3>
-                <p style={{ opacity: 0.65 }}>This lesson is ready. The teacher video can be uploaded later.</p>
+            {(() => {
+              const embedUrl = getYouTubeEmbedUrl(selectedLesson.videoUrl);
+              if (embedUrl) {
+                return (
+                  <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: "16px", overflow: "hidden" }}>
+                    <iframe
+                      src={embedUrl}
+                      title={selectedLesson.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{
+                        position: "absolute", top: 0, left: 0,
+                        width: "100%", height: "100%",
+                        border: "none", borderRadius: "16px",
+                      }}
+                    />
+                  </div>
+                );
+              }
+              if (selectedLesson.videoUrl) {
+                return (
+                  <video
+                    controls
+                    src={selectedLesson.videoUrl}
+                    style={{ width: "100%", maxHeight: "400px", borderRadius: "16px", background: "#020617" }}
+                  />
+                );
+              }
+              return (
+                <div style={largeMediaPlaceholder}>
+                  <div style={{ fontSize: "56px" }}>🎬</div>
+                  <h3>Video not added yet</h3>
+                  <p style={{ opacity: 0.65 }}>Teacher এখনো video add করেননি।</p>
+                </div>
+              );
+            })()}
+          </div>
+
+          {selectedLesson.explanation ? (
+            <div style={lessonSection}>
+              <h2>🧑‍🏫 Teacher's Explanation</h2>
+              <div style={{
+                background: "rgba(255,255,255,0.05)",
+                borderRadius: "14px",
+                padding: "18px",
+                lineHeight: "1.8",
+                fontSize: "15px",
+                whiteSpace: "pre-wrap",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}>
+                {selectedLesson.explanation}
               </div>
-            )}
-          </div>
+            </div>
+          ) : null}
 
-          <div style={lessonGrid}>
+          {selectedLesson.notes ? (
             <div style={lessonSection}>
-              <h2>🧑‍🏫 Sir's Explanation</h2>
-              <div style={contentPlaceholder}>Teacher explanation area — add the explanation video later.</div>
+              <h2>📝 Quick Notes</h2>
+              <div style={{
+                background: "rgba(37,99,235,0.10)",
+                borderRadius: "14px",
+                padding: "18px",
+                lineHeight: "1.9",
+                fontSize: "14px",
+                whiteSpace: "pre-wrap",
+                border: "1px solid rgba(96,165,250,0.18)",
+              }}>
+                {selectedLesson.notes}
+              </div>
             </div>
+          ) : null}
+
+          {selectedLesson.imageUrl ? (
             <div style={lessonSection}>
-              <h2>✍️ Board Work</h2>
-              <div style={contentPlaceholder}>Board-work image/video area — add it later from Admin.</div>
+              <h2>🖼️ Board Work</h2>
+              <img
+                src={selectedLesson.imageUrl}
+                alt="Board work"
+                style={{ width: "100%", borderRadius: "14px", maxHeight: "400px", objectFit: "contain" }}
+              />
             </div>
-          </div>
+          ) : null}
 
           <div style={lessonSection}>
-            <h2>📝 Quick Notes</h2>
-            <div style={contentPlaceholder}>Notes will be added by Admin.</div>
-          </div>
-
-          <div style={lessonSection}>
-            <h2>🎯 Think First</h2>
-            <p>Before watching the full explanation, predict what happens and then test your idea.</p>
-            <button style={exploreButton} type="button" onClick={startQuiz}>
+            <h2>🎯 Test Yourself</h2>
+            <p style={{ opacity: 0.75, marginBottom: "14px" }}>এই lesson শেষ করার পর একটা quick quiz নাও।</p>
+            <button style={exploreButton} type="button" onClick={openTakeQuizModal}>
               Take a Quick Challenge →
             </button>
           </div>
@@ -3736,32 +4253,68 @@ const startQuiz = () => {
               />
               <input
                 style={inputStyle}
-                placeholder="Curiosity-based lesson title"
+                placeholder="Lesson title (e.g. Why does monsoon change direction?)"
                 value={contentForm.title}
                 onChange={(e) => setContentForm({ ...contentForm, title: e.target.value })}
                 required
               />
               <textarea
-                style={{ ...inputStyle, minHeight: "90px", resize: "vertical" as const }}
+                style={{ ...inputStyle, minHeight: "70px", resize: "vertical" as const }}
                 placeholder="Short description"
                 value={contentForm.description}
                 onChange={(e) => setContentForm({ ...contentForm, description: e.target.value })}
               />
               <input
                 style={inputStyle}
-                placeholder="Video URL (leave empty for now)"
+                placeholder="🎥 YouTube video URL (e.g. https://youtube.com/watch?v=...)"
                 value={contentForm.videoUrl}
                 onChange={(e) => setContentForm({ ...contentForm, videoUrl: e.target.value })}
               />
-              <input
-                style={inputStyle}
-                placeholder="Image URL (leave empty for now)"
-                value={contentForm.imageUrl}
-                onChange={(e) => setContentForm({ ...contentForm, imageUrl: e.target.value })}
+              <textarea
+                style={{ ...inputStyle, minHeight: "100px", resize: "vertical" as const }}
+                placeholder="📝 Quick Notes (bullet points, key facts — students will see this)"
+                value={contentForm.notes}
+                onChange={(e) => setContentForm({ ...contentForm, notes: e.target.value })}
               />
-
-              <button type="submit" style={buttonStyle}>Save Lesson</button>
+              <textarea
+                style={{ ...inputStyle, minHeight: "100px", resize: "vertical" as const }}
+                placeholder="🧑‍🏫 Teacher's Explanation (write the full concept explanation here)"
+                value={contentForm.explanation}
+                onChange={(e) => setContentForm({ ...contentForm, explanation: e.target.value })}
+              />
+              <p style={{ opacity: 0.6, fontSize: "12px", margin: "-6px 0 8px" }}>
+                💡 YouTube URL paste করলে video automatically embed হবে।
+              </p>
+              <button type="submit" style={buttonStyle}>Save Lesson ✓</button>
             </form>
+          </div>
+
+          <div style={{ ...adminFormCard, marginTop: "24px", border: "1px solid rgba(56, 189, 248, 0.35)", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ margin: "0 0 4px" }}>🛡️ Teacher Registration & Verification</h2>
+                <p style={{ opacity: 0.8, margin: 0, fontSize: "14px" }}>
+                  Pending registrations: <strong style={{ color: adminTeachers.pending_count > 0 ? "#f87171" : "#4ade80" }}>{adminTeachers.pending_count}</strong> | Approved teachers: <strong>{adminTeachers.approved_count}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminActionMessage("");
+                  setTeacherApprovalsOpen(true);
+                  loadAdminTeachers();
+                }}
+                style={{
+                  ...buttonStyle,
+                  background: adminTeachers.pending_count > 0 ? "linear-gradient(135deg, #ef4444, #dc2626)" : "#0284c7",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  width: "auto",
+                }}
+              >
+                Manage Teacher Approvals {adminTeachers.pending_count > 0 ? `(${adminTeachers.pending_count})` : ""} →
+              </button>
+            </div>
           </div>
 
           <div style={{ ...adminFormCard, marginTop: "24px" }}>
@@ -3927,10 +4480,11 @@ const startQuiz = () => {
                       <p style={{ margin: "12px 0 0", opacity: 0.75, fontSize: "13px" }}>
                         {student.profile ? `${student.profile.class_name} • ${student.profile.board} • ${student.profile.medium}` : "Profile not completed"}
                       </p>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "12px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginTop: "12px" }}>
+                        <div style={teacherMetricStyle}><strong>⭐ {student.progress.points ?? 0}</strong><span>Points</span></div>
+                        <div style={teacherMetricStyle}><strong>🔥 {student.progress.day_streak ?? 0}d</strong><span>Streak</span></div>
                         <div style={teacherMetricStyle}><strong>{student.progress.curiosity_answered}</strong><span>Curiosity</span></div>
                         <div style={teacherMetricStyle}><strong>{student.progress.mock_attempts}</strong><span>Mocks</span></div>
-                        <div style={teacherMetricStyle}><strong>{student.progress.activity_count}</strong><span>Activity</span></div>
                       </div>
                       <div style={{ marginTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
                         <span style={{ fontSize: "12px", opacity: 0.7 }}>Mock avg: {student.progress.mock_average_percentage}%</span>
@@ -3958,10 +4512,11 @@ const startQuiz = () => {
                   <div style={{ padding: "30px 0" }}>Loading…</div>
                 ) : (
                   <>
-                    <div style={{ marginTop: "18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px" }}>
+                    <div style={{ marginTop: "18px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
+                      <div style={progressStatCard}>⭐ <strong>{selectedTeacherStudent.progress.points ?? 0}</strong><span>Total Points</span></div>
+                      <div style={progressStatCard}>🔥 <strong>{selectedTeacherStudent.progress.day_streak ?? 0} days</strong><span>Day Streak</span></div>
                       <div style={progressStatCard}>🌍 <strong>{selectedTeacherStudent.progress.curiosity_answered}</strong><span>{t.curiosityAnswered}</span></div>
                       <div style={progressStatCard}>🎯 <strong>{selectedTeacherStudent.progress.curiosity_accuracy}%</strong><span>{t.curiosityAccuracy}</span></div>
-                      <div style={progressStatCard}>✨ <strong>{selectedTeacherStudent.progress.curiosity_xp}</strong><span>{t.curiosityXp}</span></div>
                       <div style={progressStatCard}>📝 <strong>{selectedTeacherStudent.progress.mock_attempts}</strong><span>{t.mockAttempts}</span></div>
                       <div style={progressStatCard}>📈 <strong>{selectedTeacherStudent.progress.mock_average_percentage}%</strong><span>{t.mockAverage}</span></div>
                     </div>
@@ -4044,6 +4599,41 @@ const startQuiz = () => {
                   style={{ ...logoutStyle, background: "#2563eb", color: "white" }}
                 >
                   📝 Mock Test Manager
+                </button>
+              )}
+
+              {userRole === "teacher" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMessage("");
+                    setTeacherQuizManagerOpen(true);
+                    loadQuizChapters();
+                    loadTeacherQuizQuestions("All");
+                  }}
+                  style={{ ...logoutStyle, background: "#8b5cf6", color: "white" }}
+                >
+                  🧠 Chapter Quiz Manager
+                </button>
+              )}
+
+              {(userRole === "teacher" || userRole === "admin") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminActionMessage("");
+                    setTeacherApprovalsOpen(true);
+                    loadAdminTeachers();
+                  }}
+                  style={{
+                    ...logoutStyle,
+                    background: adminTeachers.pending_count > 0 ? "linear-gradient(135deg, #ef4444, #dc2626)" : "#0284c7",
+                    color: "white",
+                    fontWeight: adminTeachers.pending_count > 0 ? "bold" : "normal",
+                    boxShadow: adminTeachers.pending_count > 0 ? "0 0 12px rgba(239, 68, 68, 0.5)" : "none",
+                  }}
+                >
+                  🛡️ Teacher Approvals {adminTeachers.pending_count > 0 ? `(${adminTeachers.pending_count} Pending)` : ""}
                 </button>
               )}
 
@@ -4414,7 +5004,7 @@ const startQuiz = () => {
               <div style={statIcon}>⭐</div>
 
               <div>
-                <strong>0</strong>
+                <strong>{studentStats.points}</strong>
                 <span> {t.points}</span>
               </div>
             </div>
@@ -4423,7 +5013,7 @@ const startQuiz = () => {
               <div style={statIcon}>🔥</div>
 
               <div>
-                <strong>0</strong>
+                <strong>{studentStats.day_streak}</strong>
                 <span> {t.dayStreak}</span>
               </div>
             </div>
@@ -4486,7 +5076,13 @@ const startQuiz = () => {
                   {(() => {
                     const scores = studentActivity
                       .filter((a: any) => typeof a.score === "number" && a.score > 0)
-                      .map((a: any) => a.score);
+                      .map((a: any) => {
+                        // mock_test stores percentage (0-100), quick_quiz stores raw (0-N)
+                        if (a.activity_type === "mock_test") return a.score;
+                        // For quiz, normalize to percentage if score <= total questions count
+                        const total = a.score <= 20 ? 10 : 100;
+                        return Math.round((a.score / total) * 100);
+                      });
                     return scores.length > 0 ? `${Math.max(...scores)}%` : "—";
                   })()}
                 </strong>
@@ -4498,7 +5094,7 @@ const startQuiz = () => {
               <div>
                 <span style={dashboardStatLabel}>Learning Streak</span>
                 <strong style={dashboardStatValue}>
-                  {studentActivity.length > 0 ? `${Math.min(studentActivity.length, 30)} days` : "0 days"}
+                  {studentStats.day_streak > 0 ? `${studentStats.day_streak} days` : "0 days"}
                 </strong>
               </div>
             </div>
@@ -4531,14 +5127,14 @@ const startQuiz = () => {
 
               <div
                 style={featureCard}
-                onClick={startQuiz}
+                onClick={openTakeQuizModal}
                 role="button"
                 tabIndex={0}
               >
                 <div style={featureIcon}>🧠</div>
                 <span style={featureTag}>PRACTICE</span>
                 <h3>Take Quiz</h3>
-                <p>Test what you know with quick interactive geography questions.</p>
+                <p>Test what you know chapter-wise with interactive geography questions.</p>
                 <span style={featureArrow}>→</span>
               </div>
 
@@ -4557,14 +5153,14 @@ const startQuiz = () => {
 
               <div
                 style={featureCard}
-                onClick={openLearning}
+                onClick={loadMockTests}
                 role="button"
                 tabIndex={0}
               >
                 <div style={featureIcon}>📚</div>
                 <span style={featureTag}>RESOURCES</span>
                 <h3>Study Resources</h3>
-                <p>Find lesson notes, concepts and teacher-added learning material.</p>
+                <p>Teacher-added notes, lessons এবং learning material দেখো।</p>
                 <span style={featureArrow}>→</span>
               </div>
 
@@ -4639,14 +5235,18 @@ const startQuiz = () => {
 
               <div
                 style={featureCard}
-                onClick={() => setExplorerOpen(true)}
+                onClick={() => {
+                  loadStudentDashboardData();
+                  loadCuriosityHistory();
+                  setCuriosityHistoryOpen(true);
+                }}
                 role="button"
                 tabIndex={0}
               >
                 <div style={featureIcon}>📈</div>
                 <span style={featureTag}>PROGRESS</span>
                 <h3>Progress Tracker</h3>
-                <p>Keep building your curiosity journey through quizzes and lessons.</p>
+                <p>আপনার curiosity journey, quiz scores এবং activity দেখুন।</p>
                 <span style={featureArrow}>→</span>
               </div>
             </div>
@@ -4988,7 +5588,7 @@ const startQuiz = () => {
             </section>
           )}
 
-          {!locationEnabled && (
+          {!locationEnabled ? (
             <section style={locationPermissionCard}>
               <div style={{ fontSize: "34px" }}>📍</div>
               <div style={{ flex: 1 }}>
@@ -5011,6 +5611,24 @@ const startQuiz = () => {
                 {locationLoading ? "Getting location..." : "Allow Location"}
               </button>
             </section>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                padding: "10px 18px",
+                borderRadius: "14px",
+                marginBottom: "16px",
+                fontSize: "14px",
+                color: "#6ee7b7",
+              }}
+            >
+              <span>📍</span>
+              <span>Location active: Stay Curious is personalized for your area.</span>
+            </div>
           )}
 
       <section style={curiosityCard}>
@@ -5048,6 +5666,51 @@ const startQuiz = () => {
                   <span style={curiosityCategoryBadge}>
                     {t.curiosityCategory}: {curiosity.category}
                   </span>
+                  {curiosity.personalization_level === "city" && (
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        background: "rgba(16, 185, 129, 0.2)",
+                        border: "1px solid rgba(16, 185, 129, 0.4)",
+                        color: "#6ee7b7",
+                        fontWeight: 700,
+                      }}
+                    >
+                      📍 Local: {curiosity.city || "Kolkata"}
+                    </span>
+                  )}
+                  {curiosity.personalization_level === "region" && (
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        background: "rgba(59, 130, 246, 0.2)",
+                        border: "1px solid rgba(59, 130, 246, 0.4)",
+                        color: "#93c5fd",
+                        fontWeight: 700,
+                      }}
+                    >
+                      📍 Regional: {curiosity.region || "West Bengal"}
+                    </span>
+                  )}
+                  {curiosity.personalization_level === "country" && (
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        background: "rgba(245, 158, 11, 0.2)",
+                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                        color: "#fcd34d",
+                        fontWeight: 700,
+                      }}
+                    >
+                      📍 India
+                    </span>
+                  )}
                   {curiosity.question_date && (
                     <span style={curiosityDate}>
                       {String(curiosity.question_date)}
@@ -5470,7 +6133,826 @@ const startQuiz = () => {
             </div>
           )}
 
-          {quizOpen && quizQuestions.length > 0 && (
+          {/* Chapter Quiz Selection Modal */}
+          {chapterModalOpen && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(2, 6, 23, 0.82)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+                zIndex: 10000,
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "720px",
+                  background: "#111827",
+                  color: "white",
+                  borderRadius: "24px",
+                  padding: "30px",
+                  boxSizing: "border-box",
+                  boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
+                  border: "1px solid rgba(148, 163, 184, 0.15)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "#60a5fa", fontWeight: 700 }}>
+                      CHAPTER PRACTICE
+                    </span>
+                    <h2 style={{ margin: "4px 0 0", fontSize: "24px" }}>🧠 Take Geography Quiz</h2>
+                    <p style={{ margin: "4px 0 0", opacity: 0.72, fontSize: "14px" }}>
+                      Choose a chapter to practice or test all geography topics:
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setChapterModalOpen(false)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "white",
+                      fontSize: "26px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {userRole === "teacher" && (
+                  <div
+                    style={{
+                      background: "linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.15))",
+                      border: "1px dashed rgba(167, 139, 250, 0.5)",
+                      borderRadius: "16px",
+                      padding: "14px 18px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "20px",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "#c4b5fd" }}>🧑‍🏫 Teacher Control</strong>
+                      <p style={{ margin: "2px 0 0", fontSize: "13px", opacity: 0.8 }}>
+                        Want to add or manage quiz questions by chapter?
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChapterModalOpen(false);
+                        setTeacherQuizManagerOpen(true);
+                        loadQuizChapters();
+                        loadTeacherQuizQuestions("All");
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        background: "#8b5cf6",
+                        color: "white",
+                        border: "none",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontSize: "13px",
+                      }}
+                    >
+                      ➕ Add / Manage Chapter Questions →
+                    </button>
+                  </div>
+                )}
+
+                {chaptersLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
+                    Loading chapters... 🌍
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px", maxHeight: "400px", overflowY: "auto", paddingRight: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => startChapterQuiz("All")}
+                      style={{
+                        background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
+                        border: "1px solid #3b82f6",
+                        borderRadius: "16px",
+                        padding: "16px",
+                        textAlign: "left",
+                        color: "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gridColumn: "1 / -1",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "16px" }}>🌍 All Chapters • Mixed Quiz</div>
+                        <div style={{ fontSize: "12px", opacity: 0.8, marginTop: "3px" }}>
+                          Practice random questions from all geography chapters
+                        </div>
+                      </div>
+                      <span style={{ fontSize: "20px" }}>→</span>
+                    </button>
+
+                    {chapterList.map((ch, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => startChapterQuiz(ch.chapter)}
+                        style={{
+                          background: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: "14px",
+                          padding: "14px 16px",
+                          textAlign: "left",
+                          color: "white",
+                          cursor: "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <div style={{ flex: 1, paddingRight: "8px" }}>
+                          <div style={{ fontWeight: 600, fontSize: "14px", lineHeight: 1.4 }}>
+                            {ch.chapter}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>
+                            {ch.question_count > 0 ? `${ch.question_count} Questions available` : "Practice Chapter"}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: "16px", color: "#60a5fa" }}>▶</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Teacher Verification & Approval Modal */}
+          {teacherApprovalsOpen && (userRole === "teacher" || userRole === "admin") && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(2, 6, 23, 0.85)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+                zIndex: 11000,
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "920px",
+                  background: "#111827",
+                  color: "white",
+                  borderRadius: "24px",
+                  padding: "30px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    paddingBottom: "16px",
+                  }}
+                >
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: "24px", display: "flex", alignItems: "center", gap: "10px" }}>
+                      🛡️ Teacher Verification & Approval
+                    </h2>
+                    <p style={{ margin: "6px 0 0", opacity: 0.75, fontSize: "14px" }}>
+                      যাচাই করুন এবং নতুন শিক্ষকদের নিবন্ধন অনুমোদন করুন (Review & verify teacher registrations).
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      onClick={loadAdminTeachers}
+                      style={{
+                        ...logoutStyle,
+                        background: "#334155",
+                        color: "white",
+                        fontSize: "13px",
+                      }}
+                    >
+                      ↻ Refresh
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTeacherApprovalsOpen(false);
+                        setAdminActionMessage("");
+                      }}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "white",
+                        fontSize: "24px",
+                        cursor: "pointer",
+                        padding: "4px 8px",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {adminActionMessage && (
+                  <div
+                    style={{
+                      padding: "12px 18px",
+                      background: "rgba(34, 197, 94, 0.18)",
+                      border: "1px solid rgba(34, 197, 94, 0.4)",
+                      borderRadius: "12px",
+                      marginBottom: "20px",
+                      color: "#86efac",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {adminActionMessage}
+                  </div>
+                )}
+
+                {/* Pending Verification Section */}
+                <div style={{ marginBottom: "32px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                    <h3 style={{ margin: 0, fontSize: "18px", color: "#f87171" }}>
+                      ⏳ Pending Verification ({adminTeachers.pending_count})
+                    </h3>
+                    <span style={{ fontSize: "12px", opacity: 0.7 }}>
+                      (অনুমোদনের জন্য অপেক্ষারত শিক্ষক)
+                    </span>
+                  </div>
+
+                  {adminTeachersLoading ? (
+                    <div style={{ padding: "20px", textAlign: "center", opacity: 0.7 }}>Loading teachers...</div>
+                  ) : adminTeachers.pending.length === 0 ? (
+                    <div
+                      style={{
+                        padding: "24px",
+                        borderRadius: "16px",
+                        background: "rgba(255, 255, 255, 0.03)",
+                        border: "1px dashed rgba(255, 255, 255, 0.15)",
+                        textAlign: "center",
+                        opacity: 0.8,
+                      }}
+                    >
+                      ✅ কোনো অপেক্ষারত শিক্ষক নেই (No pending teacher registrations).
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gap: "12px" }}>
+                      {adminTeachers.pending.map((t: any) => (
+                        <div
+                          key={t.id}
+                          style={{
+                            padding: "18px",
+                            borderRadius: "16px",
+                            background: "rgba(239, 68, 68, 0.08)",
+                            border: "1px solid rgba(239, 68, 68, 0.25)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "14px",
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <strong style={{ fontSize: "17px" }}>{t.name}</strong>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  padding: "2px 8px",
+                                  borderRadius: "12px",
+                                  background: "#f87171",
+                                  color: "#0f172a",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                Pending Review
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "13px", opacity: 0.7, marginTop: "4px" }}>
+                              📧 {t.email}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "10px" }}>
+                            <button
+                              type="button"
+                              onClick={() => approveTeacher(t.id, t.name)}
+                              style={{
+                                padding: "8px 18px",
+                                background: "#16a34a",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "10px",
+                                cursor: "pointer",
+                                fontWeight: "600",
+                                fontSize: "13px",
+                              }}
+                            >
+                              ✅ Approve Teacher
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => rejectTeacher(t.id, t.name)}
+                              style={{
+                                padding: "8px 14px",
+                                background: "#dc2626",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "10px",
+                                cursor: "pointer",
+                                fontSize: "13px",
+                              }}
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Approved Teachers Section */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                    <h3 style={{ margin: 0, fontSize: "18px", color: "#4ade80" }}>
+                      ✅ Approved Teachers ({adminTeachers.approved_count})
+                    </h3>
+                    <span style={{ fontSize: "12px", opacity: 0.7 }}>
+                      (অনুমোদিত ও সক্রিয় শিক্ষকবৃন্দ)
+                    </span>
+                  </div>
+
+                  {adminTeachers.approved.length === 0 ? (
+                    <div style={{ padding: "16px", opacity: 0.7 }}>No approved teachers found.</div>
+                  ) : (
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      {adminTeachers.approved.map((t: any) => (
+                        <div
+                          key={t.id}
+                          style={{
+                            padding: "14px 18px",
+                            borderRadius: "14px",
+                            background: "rgba(34, 197, 94, 0.06)",
+                            border: "1px solid rgba(34, 197, 94, 0.2)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "10px",
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <strong>{t.name}</strong>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  padding: "2px 8px",
+                                  borderRadius: "12px",
+                                  background: "rgba(74, 222, 128, 0.2)",
+                                  color: "#86efac",
+                                  border: "1px solid rgba(74, 222, 128, 0.3)",
+                                }}
+                              >
+                                Active
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "13px", opacity: 0.7, marginTop: "2px" }}>
+                              📧 {t.email}
+                            </div>
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => revokeTeacher(t.id, t.name)}
+                              style={{
+                                padding: "6px 14px",
+                                background: "rgba(239, 68, 68, 0.2)",
+                                color: "#fca5a5",
+                                border: "1px solid rgba(239, 68, 68, 0.4)",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                              }}
+                            >
+                              Revoke Approval ⚠️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Teacher Chapter Quiz Manager Modal */}
+          {teacherQuizManagerOpen && userRole === "teacher" && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(2, 6, 23, 0.85)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "20px",
+                zIndex: 11000,
+                overflowY: "auto",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: "900px",
+                  background: "#111827",
+                  color: "white",
+                  borderRadius: "24px",
+                  padding: "30px",
+                  boxSizing: "border-box",
+                  margin: "20px 0",
+                  boxShadow: "0 25px 80px rgba(0,0,0,0.6)",
+                  border: "1px solid rgba(148, 163, 184, 0.2)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "#c4b5fd", fontWeight: 700 }}>
+                      TEACHER ACCESS
+                    </span>
+                    <h2 style={{ margin: "4px 0 0", fontSize: "24px" }}>🧠 Chapter Quiz Manager</h2>
+                    <p style={{ margin: "4px 0 0", opacity: 0.72, fontSize: "14px" }}>
+                      Take Quiz-এর জন্য অধ্যায়ভিত্তিক (Chapter-wise) প্রশ্ন যোগ ও পরিচালনা করুন।
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTeacherQuizManagerOpen(false);
+                      setMessage("");
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "white",
+                      fontSize: "26px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {message && (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: "#1e3a5f",
+                      border: "1px solid #3b82f6",
+                      marginBottom: "20px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {message}
+                  </div>
+                )}
+
+                {/* Form to Add Question */}
+                <div style={{ ...adminFormCard, background: "#1f2937", border: "1px solid #374151" }}>
+                  <h3 style={{ margin: "0 0 16px", fontSize: "18px", color: "#93c5fd" }}>
+                    ➕ Add Question by Chapter (অধ্যায়ভিত্তিক প্রশ্ন যোগ করুন)
+                  </h3>
+
+                  <form onSubmit={addTeacherQuizQuestion}>
+                    <div style={{ marginBottom: "14px" }}>
+                      <label style={{ display: "block", fontSize: "13px", marginBottom: "6px", color: "#cbd5e1" }}>
+                        Select or Create Chapter (অধ্যায় নির্বাচন করুন):
+                      </label>
+                      <select
+                        style={{ ...inputStyle, cursor: "pointer" }}
+                        value={teacherQuizForm.chapter}
+                        onChange={(e) =>
+                          setTeacherQuizForm({ ...teacherQuizForm, chapter: e.target.value })
+                        }
+                      >
+                        {chapterList.map((ch, i) => (
+                          <option key={i} value={ch.chapter}>
+                            {ch.chapter} ({ch.question_count} Qs)
+                          </option>
+                        ))}
+                        <option value="__new__">➕ + Create New Chapter (নতুন অধ্যায় লিখুন)</option>
+                      </select>
+                    </div>
+
+                    {teacherQuizForm.chapter === "__new__" && (
+                      <div style={{ marginBottom: "14px" }}>
+                        <input
+                          style={inputStyle}
+                          placeholder="Enter new chapter name (e.g. Rocks and Minerals / শিলা ও খনিজ)"
+                          value={teacherQuizForm.customChapter}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, customChapter: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: "14px" }}>
+                      <label style={{ display: "block", fontSize: "13px", marginBottom: "6px", color: "#cbd5e1" }}>
+                        Question Text (প্রশ্নের বিবরণ):
+                      </label>
+                      <textarea
+                        style={{ ...inputStyle, minHeight: "75px", resize: "vertical" as const }}
+                        placeholder="Write the geography question here..."
+                        value={teacherQuizForm.question}
+                        onChange={(e) =>
+                          setTeacherQuizForm({ ...teacherQuizForm, question: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+                      <div>
+                        <label style={{ fontSize: "12px", color: "#94a3b8" }}>Option A:</label>
+                        <input
+                          style={inputStyle}
+                          placeholder="Option A"
+                          value={teacherQuizForm.option_a}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, option_a: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", color: "#94a3b8" }}>Option B:</label>
+                        <input
+                          style={inputStyle}
+                          placeholder="Option B"
+                          value={teacherQuizForm.option_b}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, option_b: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", color: "#94a3b8" }}>Option C:</label>
+                        <input
+                          style={inputStyle}
+                          placeholder="Option C"
+                          value={teacherQuizForm.option_c}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, option_c: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "12px", color: "#94a3b8" }}>Option D:</label>
+                        <input
+                          style={inputStyle}
+                          placeholder="Option D"
+                          value={teacherQuizForm.option_d}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, option_d: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px", marginBottom: "16px" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "13px", marginBottom: "6px", color: "#cbd5e1" }}>
+                          Correct Answer:
+                        </label>
+                        <select
+                          style={{ ...inputStyle, cursor: "pointer" }}
+                          value={teacherQuizForm.correct_answer}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, correct_answer: e.target.value })
+                          }
+                        >
+                          <option value="0">Option A</option>
+                          <option value="1">Option B</option>
+                          <option value="2">Option C</option>
+                          <option value="3">Option D</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "13px", marginBottom: "6px", color: "#cbd5e1" }}>
+                          Explanation (ব্যাখ্যা - optional):
+                        </label>
+                        <input
+                          style={inputStyle}
+                          placeholder="Why is this answer correct?"
+                          value={teacherQuizForm.explanation}
+                          onChange={(e) =>
+                            setTeacherQuizForm({ ...teacherQuizForm, explanation: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      style={{ ...buttonStyle, background: "#8b5cf6" }}
+                      disabled={teacherQuizSaving}
+                    >
+                      {teacherQuizSaving ? "Adding Question..." : "➕ Add Question to Chapter"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Existing Questions List */}
+                <div style={{ marginTop: "28px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                    <h3 style={{ margin: 0, fontSize: "18px" }}>
+                      📚 Existing Questions ({teacherQuizQuestions.length})
+                    </h3>
+                    <select
+                      style={{ ...inputStyle, width: "auto", minWidth: "200px", padding: "6px 12px" }}
+                      value={teacherQuizFilterChapter}
+                      onChange={(e) => {
+                        setTeacherQuizFilterChapter(e.target.value);
+                        loadTeacherQuizQuestions(e.target.value);
+                      }}
+                    >
+                      <option value="All">All Chapters (সব অধ্যায়)</option>
+                      {chapterList.map((ch, idx) => (
+                        <option key={idx} value={ch.chapter}>
+                          {ch.chapter}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ maxHeight: "380px", overflowY: "auto", display: "grid", gap: "12px" }}>
+                    {teacherQuizQuestions.map((q) => (
+                      <div
+                        key={q.id}
+                        style={{
+                          background: "#1e293b",
+                          border: "1px solid #334155",
+                          borderRadius: "14px",
+                          padding: "16px",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                          <div>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                padding: "2px 8px",
+                                borderRadius: "6px",
+                                background: "rgba(139, 92, 246, 0.25)",
+                                color: "#c4b5fd",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {q.chapter}
+                            </span>
+                            <h4 style={{ margin: "8px 0 6px", fontSize: "15px" }}>{q.question}</h4>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteTeacherQuizQuestion(q.id)}
+                            style={{
+                              background: "#7f1d1d",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "4px 10px",
+                              fontSize: "12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px", fontSize: "13px" }}>
+                          {q.options.map((opt: string, optIdx: number) => {
+                            const isCorrect = optIdx === q.answer;
+                            return (
+                              <div
+                                key={optIdx}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  background: isCorrect ? "rgba(22, 101, 52, 0.5)" : "rgba(15, 23, 42, 0.5)",
+                                  border: isCorrect ? "1px solid #22c55e" : "1px solid transparent",
+                                  color: isCorrect ? "#86efac" : "#cbd5e1",
+                                  fontWeight: isCorrect ? 600 : 400,
+                                }}
+                              >
+                                {String.fromCharCode(65 + optIdx)}. {opt} {isCorrect && "✓"}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {q.explanation && (
+                          <div style={{ marginTop: "8px", fontSize: "12px", color: "#94a3b8" }}>
+                            💡 <em>{q.explanation}</em>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {teacherQuizQuestions.length === 0 && (
+                      <div style={{ textAlign: "center", padding: "30px", color: "#94a3b8", background: "#1e293b", borderRadius: "12px" }}>
+                        No questions found for this chapter yet. Use the form above to add questions!
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quiz Result Screen */}
+          {quizOpen && quizShowResult && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(2,6,23,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 9999 }}>
+              <div style={{ background: "#111827", borderRadius: "20px", padding: "36px 28px", maxWidth: "420px", width: "100%", textAlign: "center", color: "#fff" }}>
+                <div style={{ fontSize: "64px", marginBottom: "12px" }}>
+                  {quizScore === quizQuestions.length ? "🏆" : quizScore >= quizQuestions.length / 2 ? "🎉" : "📚"}
+                </div>
+                <h2 style={{ margin: "0 0 8px" }}>Quiz Completed!</h2>
+                <p style={{ opacity: 0.7, margin: "0 0 20px" }}>Chapter: {selectedChapterName}</p>
+                <div style={{ fontSize: "48px", fontWeight: 800, color: quizScore >= quizQuestions.length / 2 ? "#4ade80" : "#f87171" }}>
+                  {quizScore} / {quizQuestions.length}
+                </div>
+                <div style={{ fontSize: "22px", fontWeight: 700, marginTop: "8px", color: "#a5f3fc" }}>
+                  {Math.round((quizScore / quizQuestions.length) * 100)}%
+                </div>
+                <p style={{ opacity: 0.65, margin: "12px 0 24px", fontSize: "14px" }}>
+                  {quizScore === quizQuestions.length ? "নিখুঁত স্কোর! অসাধারণ! 🌟" : quizScore >= quizQuestions.length / 2 ? "দারুণ কাজ! আরো practice করো।" : "চিন্তা নেই — আবার চেষ্টা করো! 💪"}
+                </p>
+                <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => { setQuizOpen(false); setQuizShowResult(false); setQuizQuestion(0); setQuizAnswer(null); setQuizScore(0); }}
+                    style={{ padding: "12px 24px", borderRadius: "12px", border: "none", background: "#2563eb", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>
+                    ← Dashboard-এ ফিরুন
+                  </button>
+                  <button type="button" onClick={() => { setQuizShowResult(false); setQuizQuestion(0); setQuizAnswer(null); setQuizScore(0); }}
+                    style={{ padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "14px" }}>
+                    🔄 আবার খেলো
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quiz Question Screen */}
+          {quizOpen && !quizShowResult && quizQuestions.length > 0 && (
             <div
               style={{
                 position: "fixed",
@@ -5504,7 +6986,7 @@ const startQuiz = () => {
                   }}
                 >
                   <div>
-                    <h2 style={{ margin: 0 }}>🧠 Quick Quiz</h2>
+                    <h2 style={{ margin: 0 }}>🧠 {selectedChapterName && selectedChapterName !== "All" ? selectedChapterName : "Quick Quiz"}</h2>
                     <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
                       Question {quizQuestion + 1} of {quizQuestions.length}
                     </p>
@@ -5613,14 +7095,11 @@ const startQuiz = () => {
                       } else {
                         void logStudentActivity(
                           "quick_quiz",
-                          "Completed Quick Quiz",
-                          quizScore,
-                          { total: quizQuestions.length }
+                          `Quiz: ${selectedChapterName}`,
+                          Math.round((quizScore / quizQuestions.length) * 100),
+                          { total: quizQuestions.length, chapter: selectedChapterName }
                         ).then(() => loadStudentDashboardData());
-                        alert(`Quiz completed! Your score: ${quizScore} / ${quizQuestions.length}`);
-                        setQuizOpen(false);
-                        setQuizQuestion(0);
-                        setQuizAnswer(null);
+                        setQuizShowResult(true);
                       }
                     }}
                   >
@@ -5896,7 +7375,7 @@ const pageStyle = {
   width: "100%",
   background: "transparent",
   color: "#f8fafc",
-  padding: "24px",
+  padding: "clamp(10px, 3vw, 24px)",
   boxSizing: "border-box" as const,
 };
 const dashboardStyle = {
@@ -5909,15 +7388,16 @@ const topBar = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: "20px",
+  gap: "10px",
   marginBottom: "24px",
-  padding: "18px 20px",
+  padding: "14px 16px",
   borderRadius: "18px",
   background: "rgba(15, 23, 42, 0.72)",
   border: "1px solid rgba(96,165,250,0.16)",
   backdropFilter: "blur(18px)",
   WebkitBackdropFilter: "blur(18px)",
   boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
+  flexWrap: "wrap" as const,
 };
 
 const welcomeCard = {
@@ -5938,8 +7418,8 @@ const globeStyle = {
 
 const statsContainer = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: "15px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+  gap: "12px",
   marginBottom: "30px",
 };
 
@@ -6083,30 +7563,13 @@ const largeMediaPlaceholder = {
   padding: "30px",
 };
 
-const contentPlaceholder = {
-  minHeight: "130px",
-  padding: "25px",
-  borderRadius: "14px",
-  background: "#0f172a",
-  border: "1px dashed rgba(255,255,255,0.25)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textAlign: "center" as const,
-  opacity: 0.8,
-};
+// contentPlaceholder and lessonGrid removed (no longer used)
 
 const lessonSection = {
-  padding: "25px",
+  padding: "20px",
   borderRadius: "18px",
   background: "rgba(30, 41, 59, 0.92)",
   marginBottom: "20px",
-};
-
-const lessonGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, 1fr)",
-  gap: "20px",
 };
 
 const lessonTag = {
@@ -6130,8 +7593,8 @@ const dashboardHero = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: "30px",
-  padding: "34px",
+  gap: "16px",
+  padding: "clamp(16px, 4vw, 34px)",
   borderRadius: "24px",
   background:
     "linear-gradient(135deg, rgba(7,29,64,0.96), rgba(11,40,85,0.86))",
@@ -6140,6 +7603,7 @@ const dashboardHero = {
   overflow: "hidden",
   position: "relative" as const,
   marginBottom: "20px",
+  flexWrap: "wrap" as const,
 };
 
 const eyebrow = {
@@ -6165,7 +7629,7 @@ const heroSubtitle = {
 };
 
 const heroOrb = {
-  fontSize: "110px",
+  fontSize: "clamp(48px, 10vw, 110px)",
   lineHeight: 1,
   filter: "drop-shadow(0 20px 35px rgba(59,130,246,0.35))",
   flexShrink: 0,
@@ -6200,20 +7664,21 @@ const secondaryAction = {
 
 const statGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-  gap: "14px",
-  marginBottom: "34px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: "12px",
+  marginBottom: "24px",
 };
 
 const dashboardStatCard = {
   display: "flex",
   alignItems: "center",
-  gap: "14px",
-  padding: "18px",
+  gap: "10px",
+  padding: "14px",
   borderRadius: "17px",
   background: "rgba(15,23,42,0.72)",
   border: "1px solid rgba(96,165,250,0.15)",
   boxShadow: "0 14px 35px rgba(0,0,0,0.14)",
+  minWidth: 0,
 };
 
 const dashboardStatIcon = {
@@ -6264,21 +7729,21 @@ const sectionHint = {
 
 const mainDashboardGrid = {
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 330px",
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: "18px",
   alignItems: "start",
 };
 
 const featureGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: "16px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gap: "14px",
 };
 
 const featureCard = {
   position: "relative" as const,
-  minHeight: "205px",
-  padding: "23px",
+  minHeight: "170px",
+  padding: "18px",
   borderRadius: "19px",
   background:
     "linear-gradient(145deg, rgba(11,42,97,0.88), rgba(7,27,61,0.88))",
@@ -6287,6 +7752,7 @@ const featureCard = {
   cursor: "pointer",
   transition: "transform 0.2s ease, border-color 0.2s ease",
   boxSizing: "border-box" as const,
+  wordBreak: "break-word" as const,
 };
 
 const digitalCitizenshipFeatureCard = {
@@ -6303,8 +7769,8 @@ const digitalCitizenshipProgress = {
 
 const digitalTopicGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  gap: "14px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: "12px",
   marginTop: "20px",
 };
 

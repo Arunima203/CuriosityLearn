@@ -33,7 +33,7 @@ class CuriosityAnswerRequest(BaseModel):
 KOLKATA_QUESTIONS = [
     {
         "question": "Why does Kolkata receive heavy monsoon rainfall?",
-        "category": "Local Geography",
+        "category": "Local Geography (Kolkata)",
         "option_a": "Because Kolkata is near the Arctic Circle",
         "option_b": "Because seasonal monsoon winds bring moisture from the Bay of Bengal",
         "option_c": "Because Kolkata is in a desert",
@@ -46,7 +46,7 @@ KOLKATA_QUESTIONS = [
     },
     {
         "question": "Why is the Hooghly River important to Kolkata's geography?",
-        "category": "Local Geography",
+        "category": "Local Geography (Kolkata)",
         "option_a": "It is a branch of the Ganges river system and has long influenced Kolkata's location and development",
         "option_b": "It flows from Antarctica",
         "option_c": "It is a river in the Sahara Desert",
@@ -57,13 +57,52 @@ KOLKATA_QUESTIONS = [
             "an important role in Kolkata's physical and human geography."
         ),
     },
+    {
+        "question": "Why are the East Kolkata Wetlands considered the 'Kidneys of Kolkata'?",
+        "category": "Local Geography (Kolkata)",
+        "option_a": "They naturally treat municipal wastewater, support aquaculture, and act as a flood basin",
+        "option_b": "They are the highest mountain peak in the city",
+        "option_c": "They prevent all rain from entering the city",
+        "option_d": "They freeze during the winter season",
+        "correct_answer": 0,
+        "explanation": (
+            "The East Kolkata Wetlands form a world-renowned Ramsar site that treats city wastewater "
+            "using solar radiation and natural biological processes, while acting as a vital stormwater retention basin."
+        ),
+    },
+    {
+        "question": "Why does Kolkata frequently experience waterlogging during intense monsoon cloudbursts?",
+        "category": "Local Geography (Kolkata)",
+        "option_a": "Because the city slopes toward the Himalayas",
+        "option_b": "Because of low-lying deltaic terrain and high tides in the Hooghly river hindering canal discharge",
+        "option_c": "Because the city has no drainage channels at all",
+        "option_d": "Because seawater directly overflows into every street daily",
+        "correct_answer": 1,
+        "explanation": (
+            "Kolkata is built on low deltaic silt. When heavy monsoon rain coincides with high tides in the Hooghly, "
+            "sluice gates must close, slowing drainage into the river."
+        ),
+    },
+    {
+        "question": "Which climate classification best describes Kolkata's tropical climate?",
+        "category": "Local Geography (Kolkata)",
+        "option_a": "Tropical Wet and Dry (Aw)",
+        "option_b": "Polar Tundra (ET)",
+        "option_c": "Arid Desert (BWh)",
+        "option_d": "Subarctic (Dfc)",
+        "correct_answer": 0,
+        "explanation": (
+            "Kolkata has a Tropical Wet and Dry climate (Aw) characterized by hot, humid summers, "
+            "a pronounced monsoon season, and mild, pleasant winters."
+        ),
+    },
 ]
 
 
 WEST_BENGAL_QUESTIONS = [
     {
         "question": "Why is the Sundarbans important to the geography of West Bengal?",
-        "category": "Regional Geography",
+        "category": "Regional Geography (West Bengal)",
         "option_a": "It contains one of the world's largest mangrove ecosystems",
         "option_b": "It is India's highest mountain range",
         "option_c": "It is a large desert",
@@ -76,7 +115,7 @@ WEST_BENGAL_QUESTIONS = [
     },
     {
         "question": "Why is Darjeeling generally cooler than Kolkata?",
-        "category": "Regional Geography",
+        "category": "Regional Geography (West Bengal)",
         "option_a": "Darjeeling is at a much higher elevation",
         "option_b": "Darjeeling is closer to the Equator",
         "option_c": "Darjeeling is below sea level",
@@ -85,6 +124,45 @@ WEST_BENGAL_QUESTIONS = [
         "explanation": (
             "Temperature generally decreases with increasing elevation, so the "
             "high-elevation location of Darjeeling contributes to its cooler climate."
+        ),
+    },
+    {
+        "question": "Why does North Bengal (Dooars and Terai) receive significantly higher rainfall than Purulia in western Bengal?",
+        "category": "Regional Geography (West Bengal)",
+        "option_a": "The Himalayas force moisture-laden monsoon winds upward (orographic rainfall)",
+        "option_b": "North Bengal is closer to the Arabian Sea",
+        "option_c": "Western Bengal has no sunshine",
+        "option_d": "North Bengal has active volcanoes",
+        "correct_answer": 0,
+        "explanation": (
+            "The Himalayan foothills in North Bengal obstruct the Bay of Bengal monsoon winds, "
+            "causing heavy orographic rainfall, while the western plateau region receives comparatively less precipitation."
+        ),
+    },
+    {
+        "question": "Which river is widely known as the 'Lifeline of North Bengal'?",
+        "category": "Regional Geography (West Bengal)",
+        "option_a": "Teesta River",
+        "option_b": "Subarnarekha",
+        "option_c": "Damodar",
+        "option_d": "Kangsabati",
+        "correct_answer": 0,
+        "explanation": (
+            "Originating in the Himalayas of Sikkim, the Teesta River flows through North Bengal, "
+            "nourishing the plains, supporting agriculture and shaping the region's topography."
+        ),
+    },
+    {
+        "question": "Why was the Damodar River historically called the 'Sorrow of Bengal'?",
+        "category": "Regional Geography (West Bengal)",
+        "option_a": "Because it caused catastrophic annual floods before multi-purpose dams were built",
+        "option_b": "Because it has no fish",
+        "option_c": "Because it dried up permanently in winter",
+        "option_d": "Because it flows into a desert",
+        "correct_answer": 0,
+        "explanation": (
+            "Before the construction of the Damodar Valley Corporation (DVC) dams and reservoirs, "
+            "the river frequently inundated lowlands in Bardhaman, Hooghly and Howrah districts."
         ),
     },
 ]
@@ -128,6 +206,19 @@ INDIA_QUESTIONS = [
         "explanation": (
             "India's large size, varied latitude, mountains, plateaus, plains and "
             "different distances from the sea create strong climatic variation."
+        ),
+    },
+    {
+        "question": "Why is the Thar Desert located in the northwestern part of India?",
+        "category": "India Geography",
+        "option_a": "The Aravalli Range lies parallel to the South-West monsoon winds, preventing moisture condensation",
+        "option_b": "The region is too close to the North Pole",
+        "option_c": "It receives heavy winter snow that dries up soil",
+        "option_d": "There are no winds reaching northwestern India",
+        "correct_answer": 0,
+        "explanation": (
+            "The Aravallis lie parallel to the path of the Arabian Sea branch of the monsoon, "
+            "offering no barrier to force the winds to rise and produce rain."
         ),
     },
 ]
@@ -219,22 +310,45 @@ WORLD_QUESTIONS = [
 # Location matching helpers
 # ==================================================
 
-# Keep the existing question banks, but make location matching tolerant
-# of common spellings/names returned by geocoding services.
 CITY_ALIASES = {
     "kolkata": "kolkata",
     "calcutta": "kolkata",
+    "beliaghata": "kolkata",
+    "beleghata": "kolkata",
+    "salt lake": "kolkata",
+    "saltlake": "kolkata",
+    "bidhannagar": "kolkata",
+    "bidhan nagar": "kolkata",
+    "howrah": "kolkata",
+    "alipore": "kolkata",
+    "dum dum": "kolkata",
+    "dumdum": "kolkata",
+    "jadavpur": "kolkata",
+    "behala": "kolkata",
+    "tollygunge": "kolkata",
+    "new town": "kolkata",
+    "newtown": "kolkata",
+    "rajarhat": "kolkata",
+    "ballygunge": "kolkata",
+    "sealdah": "kolkata",
+    "kasba": "kolkata",
+    "garia": "kolkata",
+    "barasat": "kolkata",
+    "shyambazar": "kolkata",
 }
 
 REGION_ALIASES = {
     "west bengal": "west bengal",
     "west bengal state": "west bengal",
     "wb": "west bengal",
+    "paschim banga": "west bengal",
+    "paschimbanga": "west bengal",
 }
 
 COUNTRY_ALIASES = {
     "india": "india",
     "republic of india": "india",
+    "in": "india",
 }
 
 
@@ -242,22 +356,27 @@ def _location_key(value: str | None) -> str:
     """Normalize a location value for reliable matching."""
     if not value:
         return ""
-
     return " ".join(value.strip().lower().split())
 
 
 def _city_key(value: str | None) -> str:
     key = _location_key(value)
+    if "kolkata" in key or "calcutta" in key:
+        return "kolkata"
     return CITY_ALIASES.get(key, key)
 
 
 def _region_key(value: str | None) -> str:
     key = _location_key(value)
+    if "west bengal" in key or "bengal" in key:
+        return "west bengal"
     return REGION_ALIASES.get(key, key)
 
 
 def _country_key(value: str | None) -> str:
     key = _location_key(value)
+    if "india" in key:
+        return "india"
     return COUNTRY_ALIASES.get(key, key)
 
 
@@ -270,54 +389,31 @@ def choose_daily_question(
     location: CuriosityLocation | None,
 ):
     """
-    Choose a question from the most specific available location level.
-
-    Priority:
-        city -> region -> country -> global
-
-    The current question banks are intentionally preserved: Kolkata has a
-    city bank, West Bengal has a regional bank, India has a country bank,
-    and WORLD_QUESTIONS is the global fallback.
-
-    Returns:
-        (question_blueprint, personalization_level)
+    Choose a question blueprint from the most specific available location level.
+    Priority: city -> region -> country -> global
     """
-
     day_index = today.toordinal()
 
     city_key = _city_key(location.city if location else None)
     region_key = _region_key(location.region if location else None)
     country_key = _country_key(location.country if location else None)
 
-    # ----------------------------------------------
-    # 1. City level
-    # ----------------------------------------------
-    # Kolkata and Calcutta are treated as the same city.
+    # 1. City level (e.g. Kolkata and its neighborhoods)
     if city_key == "kolkata":
         index = day_index % len(KOLKATA_QUESTIONS)
         return KOLKATA_QUESTIONS[index], "city"
 
-    # ----------------------------------------------
-    # 2. Region level
-    # ----------------------------------------------
-    # Any city inside West Bengal gets the West Bengal bank when
-    # there is no dedicated city bank for that city.
+    # 2. Region level (e.g. West Bengal)
     if region_key == "west bengal":
         index = day_index % len(WEST_BENGAL_QUESTIONS)
         return WEST_BENGAL_QUESTIONS[index], "region"
 
-    # ----------------------------------------------
-    # 3. Country level
-    # ----------------------------------------------
-    # Any Indian location without a city/region-specific bank gets
-    # an India Geography question.
+    # 3. Country level (e.g. India)
     if country_key == "india":
         index = day_index % len(INDIA_QUESTIONS)
         return INDIA_QUESTIONS[index], "country"
 
-    # ----------------------------------------------
     # 4. Global fallback
-    # ----------------------------------------------
     index = day_index % len(WORLD_QUESTIONS)
     return WORLD_QUESTIONS[index], "global"
 
@@ -336,74 +432,49 @@ def generate_daily_curiosity(
         location,
     )
 
-    # ----------------------------------------------
-    # Set location scope
-    # ----------------------------------------------
-
     city = None
     region = None
     country = None
 
     if level == "city" and location:
-        city = location.city
-        region = location.region
-        country = location.country
+        city = "Kolkata" if _city_key(location.city) == "kolkata" else location.city
+        region = location.region or "West Bengal"
+        country = location.country or "India"
 
     elif level == "region" and location:
-        region = location.region
-        country = location.country
+        region = location.region or "West Bengal"
+        country = location.country or "India"
 
     elif level == "country" and location:
-        country = location.country
+        country = location.country or "India"
 
-    # ----------------------------------------------
-    # Check whether today's scoped question exists
-    # ----------------------------------------------
-
-    existing_query = (
-        db.query(CuriosityQuestion)
-        .filter(
-            CuriosityQuestion.question_date == today,
-        )
-    )
-
+    # Check whether today's scoped question already exists in DB
     if level == "city":
-        existing_query = existing_query.filter(
-            CuriosityQuestion.city == city,
-            CuriosityQuestion.region == region,
-            CuriosityQuestion.country == country,
-        )
+        for c in db.query(CuriosityQuestion).filter(CuriosityQuestion.question_date == today, CuriosityQuestion.city.isnot(None)).all():
+            if _city_key(c.city) == _city_key(city):
+                return c, level
 
     elif level == "region":
-        existing_query = existing_query.filter(
-            CuriosityQuestion.city.is_(None),
-            CuriosityQuestion.region == region,
-            CuriosityQuestion.country == country,
-        )
+        for c in db.query(CuriosityQuestion).filter(CuriosityQuestion.question_date == today, CuriosityQuestion.city.is_(None), CuriosityQuestion.region.isnot(None)).all():
+            if _region_key(c.region) == _region_key(region):
+                return c, level
 
     elif level == "country":
-        existing_query = existing_query.filter(
-            CuriosityQuestion.city.is_(None),
-            CuriosityQuestion.region.is_(None),
-            CuriosityQuestion.country == country,
-        )
+        for c in db.query(CuriosityQuestion).filter(CuriosityQuestion.question_date == today, CuriosityQuestion.city.is_(None), CuriosityQuestion.region.is_(None), CuriosityQuestion.country.isnot(None)).all():
+            if _country_key(c.country) == _country_key(country):
+                return c, level
 
     else:
-        existing_query = existing_query.filter(
+        existing = db.query(CuriosityQuestion).filter(
+            CuriosityQuestion.question_date == today,
             CuriosityQuestion.city.is_(None),
             CuriosityQuestion.region.is_(None),
             CuriosityQuestion.country.is_(None),
-        )
+        ).first()
+        if existing:
+            return existing, level
 
-    existing = existing_query.first()
-
-    if existing:
-        return existing, level
-
-    # ----------------------------------------------
     # Create new question
-    # ----------------------------------------------
-
     question = CuriosityQuestion(
         question=blueprint["question"],
         category=blueprint["category"],
@@ -464,13 +535,9 @@ def get_today_curiosity(
     db: Session = Depends(get_db),
 ):
     user_id = get_current_user_id(credentials)
-
     today = date.today()
 
-    # ----------------------------------------------
     # Find user's location
-    # ----------------------------------------------
-
     location = (
         db.query(CuriosityLocation)
         .filter(
@@ -479,71 +546,59 @@ def get_today_curiosity(
         .first()
     )
 
-    # ----------------------------------------------
-    # Find today's existing question
-    # ----------------------------------------------
+    blueprint, target_level = choose_daily_question(today, location)
 
     question = None
-    personalization_level = "global"
 
-    if location and location.city:
-        question = (
+    if target_level == "city" and location and location.city:
+        city_k = _city_key(location.city)
+        candidates = (
             db.query(CuriosityQuestion)
             .filter(
                 CuriosityQuestion.question_date == today,
-                CuriosityQuestion.city == location.city,
-                CuriosityQuestion.region == location.region,
-                CuriosityQuestion.country == location.country,
+                CuriosityQuestion.city.isnot(None),
             )
-            .first()
+            .all()
         )
+        for c in candidates:
+            if _city_key(c.city) == city_k:
+                question = c
+                break
 
-        if question:
-            personalization_level = "city"
-
-    # ----------------------------------------------
-    # Region
-    # ----------------------------------------------
-
-    if not question and location and location.region:
-        question = (
+    elif target_level == "region" and location and location.region:
+        reg_k = _region_key(location.region)
+        candidates = (
             db.query(CuriosityQuestion)
             .filter(
                 CuriosityQuestion.question_date == today,
                 CuriosityQuestion.city.is_(None),
-                CuriosityQuestion.region == location.region,
-                CuriosityQuestion.country == location.country,
+                CuriosityQuestion.region.isnot(None),
             )
-            .first()
+            .all()
         )
+        for c in candidates:
+            if _region_key(c.region) == reg_k:
+                question = c
+                break
 
-        if question:
-            personalization_level = "region"
-
-    # ----------------------------------------------
-    # Country
-    # ----------------------------------------------
-
-    if not question and location and location.country:
-        question = (
+    elif target_level == "country" and location and location.country:
+        cntry_k = _country_key(location.country)
+        candidates = (
             db.query(CuriosityQuestion)
             .filter(
                 CuriosityQuestion.question_date == today,
                 CuriosityQuestion.city.is_(None),
                 CuriosityQuestion.region.is_(None),
-                CuriosityQuestion.country == location.country,
+                CuriosityQuestion.country.isnot(None),
             )
-            .first()
+            .all()
         )
+        for c in candidates:
+            if _country_key(c.country) == cntry_k:
+                question = c
+                break
 
-        if question:
-            personalization_level = "country"
-
-    # ----------------------------------------------
-    # Global
-    # ----------------------------------------------
-
-    if not question:
+    elif target_level == "global":
         question = (
             db.query(CuriosityQuestion)
             .filter(
@@ -555,16 +610,9 @@ def get_today_curiosity(
             .first()
         )
 
-        if question:
-            personalization_level = "global"
-
-    # ----------------------------------------------
-    # If today's question does not exist,
-    # automatically generate it
-    # ----------------------------------------------
-
+    # If question not found for the target location level, generate it
     if not question:
-        question, personalization_level = generate_daily_curiosity(
+        question, target_level = generate_daily_curiosity(
             db=db,
             today=today,
             location=location,
@@ -578,7 +626,7 @@ def get_today_curiosity(
 
     return curiosity_response(
         question,
-        personalization_level,
+        target_level,
     )
 
 

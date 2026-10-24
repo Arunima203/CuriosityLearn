@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Geolocation } from "@capacitor/geolocation";
 
 type WeatherData = {
   current?: {
@@ -95,87 +96,71 @@ export default function WeatherStation({ onActivityLog }: { onActivityLog?: (tit
     setLoading(true);
     setError("");
 
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by this browser.");
-      setLoading(false);
-      return;
-    }
+    try {
+      // Request permission first (needed on Android)
+      const perm = await Geolocation.requestPermissions();
+      if (perm.location !== "granted") {
+        setError("Location permission was denied. Please allow location access in Settings.");
+        setLoading(false);
+        return;
+      }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
+      const latitude = pos.coords.latitude;
+      const longitude = pos.coords.longitude;
 
-        setLocation("Loading location name...");
+      setLocation("Loading location name...");
 
-try {
-  const locationResponse = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
-  );
-
-  if (locationResponse.ok) {
-    const locationData = await locationResponse.json();
-    const address = locationData.address;
-
-    const placeName =
-      address.city ||
-      address.town ||
-      address.village ||
-      address.suburb ||
-      address.county;
-
-    const stateName = address.state;
-    const countryName = address.country;
-
-    setLocation(
-      [placeName, stateName, countryName]
-        .filter(Boolean)
-        .filter((value, index, array) => array.indexOf(value) === index)
-        .join(", ") ||
-      `${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
-    );
-  } else {
-    setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
-  }
-} catch {
-  setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
-}
-
-        try {
-          const url =
-            `https://api.open-meteo.com/v1/forecast` +
-            `?latitude=${latitude}` +
-            `&longitude=${longitude}` +
-            `&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m` +
-            `&hourly=precipitation,precipitation_probability,temperature_2m` +
-            `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum` +
-            `&past_days=1` +
-            `&forecast_days=7` +
-            `&timezone=auto`;
-
-          const response = await fetch(url);
-
-          if (!response.ok) {
-            throw new Error("Weather service failed");
-          }
-
-          const data: WeatherData = await response.json();
-
-          setWeather(data);
-        } catch (err) {
-          console.error(err);
-          setError("Unable to load weather data.");
-        } finally {
-          setLoading(false);
-        }
-      },
-      () => {
-        setError(
-          "Location permission was denied. Please allow location access."
+      try {
+        const locationResponse = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
         );
+        if (locationResponse.ok) {
+          const locationData = await locationResponse.json();
+          const address = locationData.address;
+          const placeName = address.city || address.town || address.village || address.suburb || address.county;
+          const stateName = address.state;
+          const countryName = address.country;
+          setLocation(
+            [placeName, stateName, countryName].filter(Boolean)
+              .filter((v, i, a) => a.indexOf(v) === i).join(", ") ||
+            `${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`
+          );
+        } else {
+          setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
+        }
+      } catch {
+        setLocation(`${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`);
+      }
+
+      try {
+        const url =
+          `https://api.open-meteo.com/v1/forecast` +
+          `?latitude=${latitude}` +
+          `&longitude=${longitude}` +
+          `&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m` +
+          `&hourly=precipitation,precipitation_probability,temperature_2m` +
+          `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum` +
+          `&past_days=1` +
+          `&forecast_days=7` +
+          `&timezone=auto`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Weather service failed");
+        const data: WeatherData = await response.json();
+        setWeather(data);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load weather data.");
+      } finally {
         setLoading(false);
       }
-    );
+
+    } catch (err) {
+      console.error(err);
+      setError("Could not get location. Please check location permissions.");
+      setLoading(false);
+    }
   }
 
   function saveObservation() {
@@ -235,7 +220,7 @@ try {
     weather?.hourly?.precipitation_probability ?? [];
 
   const next12HoursRainChance = Math.max(
-    ...hourlyProbabilities.slice(-12),
+    ...hourlyProbabilities.slice(0, 12),
     0
   );
 
@@ -421,12 +406,13 @@ try {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-    padding: "24px",
-    fontFamily: "Arial, sans-serif",
-  },
+ container: {
+  maxWidth: "1100px",
+  margin: "0 auto",
+  padding: "24px",
+  fontFamily: "Arial, sans-serif",
+  color: "#1f2937",
+},
 
   header: {
     display: "flex",
@@ -442,6 +428,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   mainCard: {
+    color: "#1f2937",
     background: "linear-gradient(135deg, #dff3ff, #eef9ff)",
     borderRadius: "18px",
     padding: "30px",
@@ -464,6 +451,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   card: {
+    color: "#1f2937",
     background: "#fff",
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
@@ -482,7 +470,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 18px",
     cursor: "pointer",
     background: "#2563eb",
-    color: "#fff",
+    color: "#1f2937",
   },
 
   refreshButton: {

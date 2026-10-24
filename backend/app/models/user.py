@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -26,5 +26,11 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(20),
         default="student",
+        nullable=False
+    )
+
+    is_approved: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
         nullable=False
     )

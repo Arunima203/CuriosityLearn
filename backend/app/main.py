@@ -21,6 +21,9 @@ from .routers.geography_content import router as geography_content_router
 from .routers.geography_ai_chat import router as geography_ai_chat_router
 from .models import User, StudentProfile, CuriosityQuestion, CuriosityAnswer, KnowledgeItem
 from .routers.knowledge_center import router as knowledge_center_router
+from .routers.chapter_quiz import router as chapter_quiz_router
+from .routers.admin import router as admin_router
+from .routers.learning_content import router as learning_content_router
 
 # Student Progress
 from .routers.student_progress import (
@@ -71,16 +74,10 @@ app.include_router(teacher_progress_router)
 app.include_router(geography_content_router)
 app.include_router(geography_ai_chat_router)
 app.include_router(knowledge_center_router)
+app.include_router(chapter_quiz_router)
+app.include_router(admin_router)
+app.include_router(learning_content_router)
 
-
-# CORS — allow all origins (Capacitor/Android/web)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 # -----------------------------

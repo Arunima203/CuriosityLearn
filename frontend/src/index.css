@@ -8,6 +8,23 @@ body {
   font-family: Arial, sans-serif;
   color: #1f2937;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Mobile global fixes ─────────────────────────────────────────────────── */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+h1, h2, h3, h4 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+input, textarea, select, button {
+  max-width: 100%;
+  font-size: 16px; /* prevent iOS zoom on focus */
 }
 
 /* ── Natural Geography Background ───────────────────────────────────────── */

@@ -3,7 +3,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from datetime import date, datetime, timedelta
+from sqlalchemy import cast, func, Date
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -233,6 +234,134 @@ def get_student_activity(
     ]
 
 
+def calculate_student_stats(db: Session, user_id: int):
+    # Curiosity XP
+    curiosity_xp = (
+        db.query(func.coalesce(func.sum(CuriosityAnswer.xp_earned), 0))
+        .filter(CuriosityAnswer.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    # Activity scores (challenges, chapter quizzes, etc.)
+    activity_points = (
+        db.query(func.coalesce(func.sum(StudentActivity.score), 0))
+        .filter(
+            StudentActivity.user_id == user_id,
+            StudentActivity.score > 0,
+        )
+        .scalar()
+        or 0
+    )
+
+    # Mock test scores (10 points per score)
+    mock_score = (
+        db.query(func.coalesce(func.sum(MockAttempt.score), 0))
+        .filter(MockAttempt.student_id == user_id)
+        .scalar()
+        or 0
+    )
+    mock_points = mock_score * 10
+
+    total_points = int(curiosity_xp + activity_points + mock_points)
+
+    # Active dates for day streak
+    activity_dates = {
+        row[0]
+        for row in db.query(cast(StudentActivity.created_at, Date))
+        .filter(StudentActivity.user_id == user_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    curiosity_dates = {
+        row[0]
+        for row in db.query(cast(CuriosityAnswer.answered_at, Date))
+        .filter(CuriosityAnswer.user_id == user_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+
+    active_dates = set()
+    for d in (activity_dates | curiosity_dates):
+        if isinstance(d, datetime):
+            active_dates.add(d.date())
+        elif isinstance(d, date):
+            active_dates.add(d)
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    streak = 0
+    if today in active_dates:
+        curr = today
+        while curr in active_dates:
+            streak += 1
+            curr -= timedelta(days=1)
+    elif yesterday in active_dates:
+        curr = yesterday
+        while curr in active_dates:
+            streak += 1
+            curr -= timedelta(days=1)
+
+    curiosity_total = (
+        db.query(func.count(CuriosityAnswer.id))
+        .filter(CuriosityAnswer.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    mock_attempts = (
+        db.query(func.count(MockAttempt.id))
+        .filter(MockAttempt.student_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    activity_count = (
+        db.query(func.count(StudentActivity.id))
+        .filter(StudentActivity.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    return {
+        "points": total_points,
+        "day_streak": streak,
+        "curiosity_xp": int(curiosity_xp),
+        "activity_points": int(activity_points),
+        "mock_points": int(mock_points),
+        "curiosity_answered": int(curiosity_total),
+        "mock_attempts": int(mock_attempts),
+        "activity_count": int(activity_count),
+        "active_days_count": len(active_dates),
+    }
+
+
+# --------------------------------------------------
+# Student: Get live stats (Points, Day Streak, etc.)
+# --------------------------------------------------
+
+@student_router.get("/student/stats")
+def get_student_stats(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    user_id = get_current_user_id(credentials)
+    user = get_user_or_404(db, user_id)
+
+    if user.role != "student":
+        raise HTTPException(
+            status_code=403,
+            detail="Student access required",
+        )
+
+    return calculate_student_stats(db, user_id)
+
+
+
 # --------------------------------------------------
 # Teacher: Build student summary
 # --------------------------------------------------
@@ -241,6 +370,8 @@ def build_student_summary(
     db: Session,
     student: User,
 ):
+
+    student_stats = calculate_student_stats(db, student.id)
 
     profile = (
         db.query(StudentProfile)
@@ -422,6 +553,8 @@ def build_student_summary(
         ),
 
         "progress": {
+            "points": student_stats["points"],
+            "day_streak": student_stats["day_streak"],
             "curiosity_answered": int(
                 curiosity_total
             ),
