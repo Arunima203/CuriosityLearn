@@ -17,4 +17,7 @@ class LearningContent(Base):
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # PDF stored as base64 data-URI — works on Render (no disk needed)
+    pdf_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pdf_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)

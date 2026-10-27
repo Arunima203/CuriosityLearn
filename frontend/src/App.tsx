@@ -301,6 +301,8 @@ type LearningContent = {
   imageUrl: string;
   notes: string;
   explanation: string;
+  pdf_data?: string;
+  pdf_name?: string;
 };
 
 type GeographyTopic = {
@@ -1069,6 +1071,8 @@ function App() {
     notes: "",
     explanation: "",
   });
+  const [lessonPdfFile, setLessonPdfFile] = useState<File | null>(null);
+  const [lessonPdfLoading, setLessonPdfLoading] = useState(false);
 
   // Teacher Geography Topic + Picture
   const [geographyTopics, setGeographyTopics] = useState<GeographyTopic[]>([]);
@@ -2204,6 +2208,8 @@ async function submitInnovationProject(
             imageUrl: item.image_url || "",
             notes: item.notes || "",
             explanation: item.explanation || "",
+            pdf_data: item.pdf_data || "",
+            pdf_name: item.pdf_name || "",
           }));
           setLearningContent(mapped);
         }
@@ -2843,6 +2849,44 @@ async function submitInnovationProject(
     setAdminOpen(true);
     setLearningOpen(false);
     setSelectedLesson(null);
+  }
+
+  async function uploadLessonPdf(lessonId: string) {
+    if (!lessonPdfFile) return;
+    const token = localStorage.getItem("access_token");
+    if (!token || isNaN(Number(lessonId))) return;
+    setLessonPdfLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("pdf", lessonPdfFile);
+      const res = await fetchWithTimeout(
+        `${API_URL}/learning-content/${lessonId}/upload-pdf`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData },
+        60000
+      );
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || "PDF upload failed."); return; }
+      alert(`✅ PDF uploaded: ${data.pdf_name}`);
+      setLessonPdfFile(null);
+      // Refresh lessons
+      void loadLearningContentFromBackend();
+    } catch {
+      alert("PDF upload failed. Please try again.");
+    } finally {
+      setLessonPdfLoading(false);
+    }
+  }
+
+  async function deleteLessonPdf(lessonId: string) {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    if (!window.confirm("PDF সরিয়ে দেবেন?")) return;
+    try {
+      await fetch(`${API_URL}/learning-content/${lessonId}/pdf`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      void loadLearningContentFromBackend();
+    } catch {}
   }
 
   async function saveLearningContent(e: FormEvent) {
@@ -4251,6 +4295,41 @@ async function submitInnovationProject(
             </div>
           ) : null}
 
+          {selectedLesson.pdf_data ? (
+            <div style={lessonSection}>
+              <h2>📄 Notes PDF</h2>
+              <p style={{ opacity: 0.7, fontSize: "13px", marginBottom: "12px" }}>
+                📎 {selectedLesson.pdf_name || "notes.pdf"}
+              </p>
+              {/* Embedded PDF viewer */}
+              <div style={{ width: "100%", height: "500px", borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <iframe
+                  src={selectedLesson.pdf_data}
+                  title={selectedLesson.pdf_name || "PDF Notes"}
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                />
+              </div>
+              {/* Download button */}
+              <a
+                href={selectedLesson.pdf_data}
+                download={selectedLesson.pdf_name || "notes.pdf"}
+                style={{
+                  display: "inline-block",
+                  marginTop: "12px",
+                  padding: "10px 20px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg,#2563eb,#0e7490)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  textDecoration: "none",
+                }}
+              >
+                ⬇️ Download PDF
+              </a>
+            </div>
+          ) : null}
+
           <div style={lessonSection}>
             <h2>🎯 Test Yourself</h2>
             <p style={{ opacity: 0.75, marginBottom: "14px" }}>এই lesson শেষ করার পর একটা quick quiz নাও।</p>
@@ -4445,12 +4524,45 @@ async function submitInnovationProject(
             {learningContent.map((lesson) => (
               <div key={lesson.id} style={learningCard}>
                 <span style={lessonTag}>{lesson.subject} • {lesson.chapter}</span>
-                <h3>{lesson.title}</h3>
-                <p style={{ opacity: 0.7 }}>{lesson.videoUrl ? "🎥 Video added" : "🎥 Video empty"}</p>
-                <p style={{ opacity: 0.7 }}>{lesson.imageUrl ? "🖼️ Image added" : "🖼️ Image empty"}</p>
+                <h3 style={{ marginBottom: "8px" }}>{lesson.title}</h3>
+                <p style={{ opacity: 0.7, fontSize: "13px" }}>{lesson.videoUrl ? "🎥 Video ✓" : "🎥 No video"}</p>
+                <p style={{ opacity: 0.7, fontSize: "13px" }}>
+                  {lesson.pdf_name ? `📄 PDF: ${lesson.pdf_name}` : "📄 No PDF"}
+                </p>
+
+                {/* PDF Upload for this lesson */}
+                <div style={{ marginTop: "12px", padding: "12px", borderRadius: "10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <p style={{ fontSize: "12px", opacity: 0.7, marginBottom: "8px" }}>📤 Upload PDF Notes:</p>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    style={{ ...inputStyle, fontSize: "12px", padding: "8px" }}
+                    onChange={(e) => setLessonPdfFile(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                    <button
+                      type="button"
+                      style={{ ...buttonStyle, flex: 1, padding: "8px", fontSize: "13px" }}
+                      disabled={!lessonPdfFile || lessonPdfLoading}
+                      onClick={() => uploadLessonPdf(lesson.id)}
+                    >
+                      {lessonPdfLoading ? "Uploading..." : "Upload PDF ↑"}
+                    </button>
+                    {lesson.pdf_name && (
+                      <button
+                        type="button"
+                        style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "#7f1d1d", color: "white", cursor: "pointer", fontSize: "12px" }}
+                        onClick={() => deleteLessonPdf(lesson.id)}
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  style={{ ...logoutStyle, background: "#7f1d1d", color: "white" }}
+                  style={{ ...logoutStyle, background: "#7f1d1d", color: "white", marginTop: "10px", width: "100%" }}
                   onClick={() => deleteLearningContent(lesson.id)}
                 >
                   Delete Lesson

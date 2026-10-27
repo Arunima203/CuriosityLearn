@@ -59,7 +59,9 @@ def run_safe_migrations():
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         );
         """,
-        # Create chapter_quiz_questions table if missing
+        # Add pdf_data and pdf_name to learning_contents if missing
+        "ALTER TABLE learning_contents ADD COLUMN IF NOT EXISTS pdf_data TEXT;",
+        "ALTER TABLE learning_contents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);",
         """
         CREATE TABLE IF NOT EXISTS chapter_quiz_questions (
             id SERIAL PRIMARY KEY,
