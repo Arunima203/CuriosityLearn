@@ -4309,24 +4309,33 @@ async function submitInnovationProject(
                   style={{ width: "100%", height: "100%", border: "none" }}
                 />
               </div>
-              {/* Download button */}
-              <a
-                href={selectedLesson.pdf_data}
-                download={selectedLesson.pdf_name || "notes.pdf"}
+              {/* Download button — works on both web and Android */}
+              <button
+                type="button"
+                onClick={() => {
+                  // Android Capacitor & web compatible download
+                  const link = document.createElement("a");
+                  link.href = selectedLesson.pdf_data!;
+                  link.download = selectedLesson.pdf_name || "notes.pdf";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
                 style={{
                   display: "inline-block",
                   marginTop: "12px",
-                  padding: "10px 20px",
-                  borderRadius: "10px",
+                  padding: "12px 22px",
+                  borderRadius: "12px",
                   background: "linear-gradient(135deg,#2563eb,#0e7490)",
                   color: "#fff",
                   fontWeight: 700,
                   fontSize: "14px",
-                  textDecoration: "none",
+                  border: "none",
+                  cursor: "pointer",
                 }}
               >
                 ⬇️ Download PDF
-              </a>
+              </button>
             </div>
           ) : null}
 
@@ -4536,28 +4545,54 @@ async function submitInnovationProject(
                   <input
                     type="file"
                     accept="application/pdf"
-                    style={{ ...inputStyle, fontSize: "12px", padding: "8px" }}
+                    style={{ ...inputStyle, fontSize: "12px", padding: "8px", marginBottom: "10px" }}
                     onChange={(e) => setLessonPdfFile(e.target.files?.[0] || null)}
                   />
-                  <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <button
                       type="button"
-                      style={{ ...buttonStyle, flex: 1, padding: "8px", fontSize: "13px" }}
+                      style={{
+                        flex: 1,
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        border: "none",
+                        background: lessonPdfFile ? "linear-gradient(135deg,#2563eb,#0e7490)" : "rgba(255,255,255,0.1)",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: "13px",
+                        cursor: lessonPdfFile && !lessonPdfLoading ? "pointer" : "not-allowed",
+                        opacity: lessonPdfFile && !lessonPdfLoading ? 1 : 0.6,
+                      }}
                       disabled={!lessonPdfFile || lessonPdfLoading}
                       onClick={() => uploadLessonPdf(lesson.id)}
                     >
-                      {lessonPdfLoading ? "Uploading..." : "Upload PDF ↑"}
+                      {lessonPdfLoading ? "⏳ Uploading..." : "⬆️ Upload PDF"}
                     </button>
                     {lesson.pdf_name && (
                       <button
                         type="button"
-                        style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "#7f1d1d", color: "white", cursor: "pointer", fontSize: "12px" }}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          border: "none",
+                          background: "#7f1d1d",
+                          color: "white",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
                         onClick={() => deleteLessonPdf(lesson.id)}
                       >
-                        🗑️
+                        🗑️ Remove PDF
                       </button>
                     )}
                   </div>
+                  {lesson.pdf_name && (
+                    <p style={{ fontSize: "11px", color: "#4ade80", marginTop: "6px" }}>
+                      ✅ PDF uploaded: {lesson.pdf_name}
+                    </p>
+                  )}
                 </div>
 
                 <button

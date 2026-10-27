@@ -1,4 +1,5 @@
 import base64
+import threading
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
@@ -9,6 +10,7 @@ from ..database import get_db
 from ..models import User
 from ..models.learning_content import LearningContent
 from ..services.jwt import get_current_user_id, security
+from ..services.push import send_push_to_all_students
 
 router = APIRouter(prefix="/learning-content", tags=["Learning Content"])
 
@@ -109,6 +111,17 @@ def create_learning_content(
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    # Notify all subscribed students in background (non-blocking)
+    threading.Thread(
+        target=send_push_to_all_students,
+        args=(
+            "📚 New Study Material Added!",
+            f"{teacher.name} added a new lesson: {item.title}",
+        ),
+        daemon=True,
+    ).start()
+
     return content_response(item)
 
 
