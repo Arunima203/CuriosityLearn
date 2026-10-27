@@ -888,6 +888,11 @@ const GEOGRAPHY_INNOVATION_SECTIONS: Record<
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resetStep, setResetStep] = useState<"email"|"reset">("email");
 
   const [language, setLanguage] = useState<Language>(
     (localStorage.getItem("language") as Language) || "en"
@@ -1483,6 +1488,53 @@ async function submitInnovationProject(
       setCountryDetails(null);
     } finally {
       setLoadingCountry(false);
+    }
+  }
+
+  async function handleForgotPassword(e: FormEvent) {
+    e.preventDefault();
+    setMessage("");
+    try {
+      const res = await fetchWithTimeout(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      }, 30000);
+      const data = await res.json();
+      if (!res.ok) { setMessage(data.detail || "Something went wrong."); return; }
+      if (data.found) {
+        setResetToken(data.reset_token);
+        setResetStep("reset");
+        setMessage("");
+      } else {
+        setMessage("❌ এই email দিয়ে কোনো account নেই।");
+      }
+    } catch {
+      setMessage("Connection failed. Try again.");
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    setMessage("");
+    if (newPassword.length < 6) { setMessage("Password কমপক্ষে ৬ character হতে হবে।"); return; }
+    try {
+      const res = await fetchWithTimeout(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reset_token: resetToken, new_password: newPassword }),
+      }, 30000);
+      const data = await res.json();
+      if (!res.ok) { setMessage(data.detail || "Reset failed."); return; }
+      setMessage("✅ Password reset হয়েছে! এখন login করুন।");
+      setForgotMode(false);
+      setResetStep("email");
+      setForgotEmail("");
+      setResetToken("");
+      setNewPassword("");
+      setIsLogin(true);
+    } catch {
+      setMessage("Connection failed. Try again.");
     }
   }
 
@@ -7304,6 +7356,73 @@ async function submitInnovationProject(
               <span style={authButtonArrow}>→</span>
             </button>
           </form>
+
+          {isLogin && !forgotMode && (
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              <button
+                type="button"
+                onClick={() => { setForgotMode(true); setMessage(""); setResetStep("email"); }}
+                style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: "13px", textDecoration: "underline" }}
+              >
+                🔑 Forgot password?
+              </button>
+            </div>
+          )}
+
+          {forgotMode && (
+            <div style={{ marginTop: "20px", padding: "20px", borderRadius: "16px", background: "rgba(37,99,235,0.08)", border: "1px solid rgba(96,165,250,0.2)" }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "#93c5fd" }}>
+                {resetStep === "email" ? "🔑 Password Reset" : "🔒 New Password"}
+              </h3>
+
+              {resetStep === "email" ? (
+                <form onSubmit={handleForgotPassword}>
+                  <p style={{ opacity: 0.75, fontSize: "13px", marginBottom: "12px" }}>
+                    Registered email address লিখুন।
+                  </p>
+                  <input
+                    type="email"
+                    placeholder="আপনার email address"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    style={{ ...authInput, marginBottom: "10px" }}
+                  />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button type="submit" style={{ ...authSubmitButton, flex: 1, justifyContent: "center" }}>
+                      <span>Get Reset Code →</span>
+                    </button>
+                    <button type="button" onClick={() => { setForgotMode(false); setMessage(""); }} style={{ padding: "10px 16px", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "10px", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "13px" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword}>
+                  <p style={{ opacity: 0.75, fontSize: "13px", marginBottom: "12px" }}>
+                    নতুন password দিন (কমপক্ষে ৬ character)।
+                  </p>
+                  <input
+                    type="password"
+                    placeholder="নতুন password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    style={{ ...authInput, marginBottom: "10px" }}
+                  />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button type="submit" style={{ ...authSubmitButton, flex: 1, justifyContent: "center" }}>
+                      <span>✅ Reset Password</span>
+                    </button>
+                    <button type="button" onClick={() => { setResetStep("email"); setNewPassword(""); }} style={{ padding: "10px 16px", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "10px", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: "13px" }}>
+                      Back
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
 
           {message && <div style={{ ...authMessage, background: message.toLowerCase().includes("successful") ? "rgba(22,163,74,0.15)" : "rgba(239,68,68,0.12)", border: message.toLowerCase().includes("successful") ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.25)", color: message.toLowerCase().includes("successful") ? "#86efac" : "#fca5a5" }}>{message}</div>}
 
