@@ -3,6 +3,7 @@ import {
   generateQuizQuestions,
   type QuizQuestion,
 } from "./data/quizGenerator";
+import { Filesystem, Directory } from "@capacitor/filesystem";
 
 import {
   ComposableMap,
@@ -4337,17 +4338,39 @@ async function submitInnovationProject(
                   style={{ width: "100%", height: "100%", border: "none" }}
                 />
               </div>
-              {/* Download button — works on both web and Android */}
+              {/* Download button — Capacitor Filesystem for Android, fallback for web */}
               <button
                 type="button"
-                onClick={() => {
-                  // Android Capacitor & web compatible download
-                  const link = document.createElement("a");
-                  link.href = selectedLesson.pdf_data!;
-                  link.download = selectedLesson.pdf_name || "notes.pdf";
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
+                onClick={async () => {
+                  const fileName = selectedLesson.pdf_name || "notes.pdf";
+                  const dataUrl = selectedLesson.pdf_data!;
+                  try {
+                    // Capacitor native (Android/iOS)
+                    const isNative = (window as any).Capacitor?.isNativePlatform?.();
+                    if (isNative) {
+                      // Strip data URI prefix to get pure base64
+                      const base64 = dataUrl.split(",")[1];
+                      await Filesystem.writeFile({
+                        path: fileName,
+                        data: base64,
+                        directory: Directory.Documents,
+                        recursive: true,
+                      });
+                      alert(`✅ "${fileName}" saved to Documents folder!`);
+                    } else {
+                      // Web fallback
+                      const link = document.createElement("a");
+                      link.href = dataUrl;
+                      link.download = fileName;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
+                  } catch (err) {
+                    // Final fallback — open in new tab
+                    const win = window.open();
+                    if (win) win.document.write(`<iframe src="${dataUrl}" style="width:100%;height:100vh;border:none;"></iframe>`);
+                  }
                 }}
                 style={{
                   display: "inline-block",

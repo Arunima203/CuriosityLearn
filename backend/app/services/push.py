@@ -13,19 +13,27 @@ from ..models import NotificationSubscription
 
 
 def _resolve_private_key() -> str | None:
+    # Option 1: key content stored directly in env var (for Render/cloud)
+    key_content = os.getenv("VAPID_PRIVATE_KEY")
+    if key_content:
+        # Write to a temp file and return its path
+        import tempfile
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False)
+        tmp.write(key_content.replace("\\n", "\n"))
+        tmp.close()
+        return tmp.name
+
+    # Option 2: file path
     raw = os.getenv("VAPID_PRIVATE_KEY_PATH", "private_key.pem")
     p = Path(raw)
     if p.is_absolute() and p.is_file():
         return str(p)
-    # Try relative to backend/ directory (2 parents up from services/)
     resolved = Path(__file__).resolve().parents[1] / raw
     if resolved.is_file():
         return str(resolved)
-    # Try cwd
     cwd_path = Path.cwd() / raw
     if cwd_path.is_file():
         return str(cwd_path)
-    # Return raw — webpush will handle the path itself
     return raw
 
 
