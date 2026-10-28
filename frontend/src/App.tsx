@@ -2854,13 +2854,42 @@ async function submitInnovationProject(
   async function uploadLessonPdf(lessonId: string) {
     if (!lessonPdfFile) return;
     const token = localStorage.getItem("access_token");
-    if (!token || isNaN(Number(lessonId))) return;
+    if (!token) return;
+
     setLessonPdfLoading(true);
     try {
+      let backendId = lessonId;
+
+      // If this is a localStorage-only lesson (non-numeric ID), first save it to backend
+      if (isNaN(Number(lessonId))) {
+        const lesson = learningContent.find(l => l.id === lessonId);
+        if (!lesson) { alert("Lesson not found."); return; }
+        const createRes = await fetchWithTimeout(`${API_URL}/learning-content/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            subject: lesson.subject,
+            chapter: lesson.chapter,
+            title: lesson.title,
+            description: lesson.description || null,
+            video_url: lesson.videoUrl || null,
+            notes: lesson.notes || null,
+            explanation: lesson.explanation || null,
+          }),
+        }, 30000);
+        const createData = await createRes.json();
+        if (!createRes.ok) { alert(createData.detail || "Failed to save lesson."); return; }
+        backendId = String(createData.id);
+        // Update local state with new backend ID
+        setLearningContent(prev => prev.map(l =>
+          l.id === lessonId ? { ...l, id: backendId } : l
+        ));
+      }
+
       const formData = new FormData();
       formData.append("pdf", lessonPdfFile);
       const res = await fetchWithTimeout(
-        `${API_URL}/learning-content/${lessonId}/upload-pdf`,
+        `${API_URL}/learning-content/${backendId}/upload-pdf`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData },
         60000
       );
@@ -2868,7 +2897,6 @@ async function submitInnovationProject(
       if (!res.ok) { alert(data.detail || "PDF upload failed."); return; }
       alert(`✅ PDF uploaded: ${data.pdf_name}`);
       setLessonPdfFile(null);
-      // Refresh lessons
       void loadLearningContentFromBackend();
     } catch {
       alert("PDF upload failed. Please try again.");
